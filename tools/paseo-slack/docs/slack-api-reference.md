@@ -85,7 +85,7 @@ Covers public channels, private channels, direct messages (IM), and multi-person
 | `conversations.replies`    | Fetch all replies in a thread             | `channel`, `ts` (parent message ts), `limit`, `cursor`, `oldest`, `latest`                                       |
 | `conversations.list`       | List channels/DMs in workspace            | `types` (`public_channel,private_channel,im,mpim`), `limit`, `cursor`, `exclude_archived`                        |
 | `conversations.info`       | Get channel details, topic, members count | `channel`, `include_num_members` (`true`)                                                                        |
-| `conversations.open`       | Open or find a 1-on-1 DM or MPIM          | `users` (comma-separated list of User IDs, e.g. `U0987654321`)                                                     |
+| `conversations.open`       | Open or find a 1-on-1 DM or MPIM          | `users` (comma-separated list of User IDs, e.g. `U0987654321`)                                                   |
 | `conversations.members`    | List user IDs who are members of channel  | `channel`, `limit`, `cursor`                                                                                     |
 | `conversations.join`       | Join a public channel                     | `channel`                                                                                                        |
 | `conversations.leave`      | Leave a channel                           | `channel`                                                                                                        |

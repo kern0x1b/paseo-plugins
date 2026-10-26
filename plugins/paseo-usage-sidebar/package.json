@@ -1,29 +1,23 @@
 {
   "name": "paseo-usage-sidebar",
-  "description": "Provider plan usage in the Paseo sidebar: an openable panel plus an always-visible meter under the sidebar entry, read from Paseo's own usage data so the numbers match Settings \u2192 Usage.",
-  "private": true,
   "version": "1.1.1",
+  "description": "Provider plan usage in the Paseo sidebar: an openable panel plus an always-visible meter under the sidebar entry, read from Paseo's own usage data so the numbers match Settings → Usage.",
+  "private": true,
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kern0x1b/paseo-usage-sidebar.git"
+    "url": "git+https://github.com/kern0x1b/paseo-plugins.git",
+    "directory": "plugins/paseo-usage-sidebar"
+  },
+  "homepage": "https://github.com/kern0x1b/paseo-plugins/tree/main/plugins/paseo-usage-sidebar#readme",
+  "bugs": {
+    "url": "https://github.com/kern0x1b/paseo-plugins/issues"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./test/loader.mjs --test test/*.test.ts",
-    "hooks:install": "git config core.hooksPath .githooks"
-  },
-  "devDependencies": {
-    "@getpaseo/plugin": "0.8.0",
-    "@tanstack/react-query": "^5.90.11",
-    "@types/react": "~19.2.0",
-    "react": "19.1.0",
-    "react-native": "0.81.5",
-    "typescript": "^5.9.3",
-    "zod": "^4.4.3"
-  },
-  "homepage": "https://github.com/kern0x1b/paseo-usage-sidebar#readme",
-  "bugs": {
-    "url": "https://github.com/kern0x1b/paseo-usage-sidebar/issues"
+    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./test/loader.mjs --test test/*.test.ts"
   }
 }

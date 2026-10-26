@@ -29,7 +29,8 @@ const COMPOSER_SHADOW = `${EDGE}, 0 1px 3px 0 rgba(0, 0, 0, 0.5), 0 4px 14px -2p
 const COMPOSER_SHADOW_FOCUS = `inset 0 1px 0 0 rgba(255, 255, 255, 0.08), inset 0 0 0 1px rgba(255, 255, 255, 0.11), 0 1px 3px 0 rgba(0, 0, 0, 0.5), 0 4px 14px -2px rgba(0, 0, 0, 0.55), 0 14px 32px -8px rgba(0, 0, 0, 0.6)`;
 // A field the user types into is pressed into the surface instead: a dark inner shadow along its top.
 const RECESSED_SHADOW = "inset 0 1px 2px 0 rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.05)";
-const RECESSED_SHADOW_FOCUS = "inset 0 1px 2px 0 rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.12)";
+const RECESSED_SHADOW_FOCUS =
+  "inset 0 1px 2px 0 rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.12)";
 const FLOATING_SHADOW = `${EDGE}, 0 2px 8px 0 rgba(0, 0, 0, 0.5), 0 14px 36px -6px rgba(0, 0, 0, 0.6)`;
 
 const LAYOUT_CSS = `
@@ -381,11 +382,15 @@ export default function contribute(client: PluginClientContext) {
         tag(node, "diff-row");
       }
     });
-    all('[data-testid^="sidebar-project-row-"]').forEach((el) => tag(el.parentElement?.parentElement, "project-group"));
+    all('[data-testid^="sidebar-project-row-"]').forEach((el) =>
+      tag(el.parentElement?.parentElement, "project-group"),
+    );
     all('[data-testid="sidebar-schedules"]').forEach((el) =>
       tag(el.parentElement?.parentElement?.parentElement, "sidebar-nav"),
     );
-    all('[data-testid="sidebar-project-workspace-list-scroll"] > div > div:first-child > [dir="auto"]').forEach((el) => {
+    all(
+      '[data-testid="sidebar-project-workspace-list-scroll"] > div > div:first-child > [dir="auto"]',
+    ).forEach((el) => {
       if (el.children.length > 0 || el.closest('[data-testid^="sidebar-project-row-"]')) return;
       tag(el, "list-header-label");
       tag(el.parentElement, "list-header");
@@ -396,7 +401,9 @@ export default function contribute(client: PluginClientContext) {
     all('[data-testid="workspace-header-title"]').forEach((el) =>
       tagUpTo(el, 2, '[data-testid="workspace-tabs-row"]', "no-divider"),
     );
-    all('[data-testid="sidebar-footer"]').forEach((el) => tagUpTo(el, 1, '[data-testid="workspace-tabs-row"]', "sidebar"));
+    all('[data-testid="sidebar-footer"]').forEach((el) =>
+      tagUpTo(el, 1, '[data-testid="workspace-tabs-row"]', "sidebar"),
+    );
     all('[data-testid="workspace-open-in-editor-caret"]').forEach((el) => {
       tag(el.parentElement, "editor-button");
       tag(el.parentElement?.parentElement, "editor-frame");
@@ -425,7 +432,10 @@ export default function contribute(client: PluginClientContext) {
   const inspected = new WeakSet<Element>();
   const watchedRoots = new WeakSet<Element>();
   const outlined = (cs: CSSStyleDeclaration) =>
-    cs.borderTopWidth !== "0px" && cs.borderBottomWidth !== "0px" && cs.borderLeftWidth !== "0px" && cs.borderTopColor !== "rgba(0, 0, 0, 0)";
+    cs.borderTopWidth !== "0px" &&
+    cs.borderBottomWidth !== "0px" &&
+    cs.borderLeftWidth !== "0px" &&
+    cs.borderTopColor !== "rgba(0, 0, 0, 0)";
   const markSurfaces = () => {
     all(SELECTABLE_ROOTS).forEach((root) => {
       if (watchedRoots.has(root)) return;
@@ -438,14 +448,21 @@ export default function contribute(client: PluginClientContext) {
       if (el.closest(SKIP_ROOTS)) return;
       if (el.tagName === "BUTTON") {
         const menu = el.closest(FLOATING_ROOTS);
-        if (menu && el.getBoundingClientRect().width >= menu.getBoundingClientRect().width - 4) el.dataset.midnightMenuRow = "";
+        if (menu && el.getBoundingClientRect().width >= menu.getBoundingClientRect().width - 4)
+          el.dataset.midnightMenuRow = "";
       }
       const cs = getComputedStyle(el);
       if (outlined(cs)) {
         const height = el.getBoundingClientRect().height;
-        if (height <= 60 && el.querySelector(":scope > input, :scope > * > input, :scope > textarea, :scope > * > textarea")) el.dataset.midnight = "field";
-        else if (el.tagName === "BUTTON" || el.getAttribute("role") === "button") el.dataset.midnight = "control";
-        else if (parseFloat(cs.borderTopLeftRadius) >= 999 && height <= 28 && el.textContent) el.dataset.midnight = "chip";
+        if (
+          height <= 60 &&
+          el.querySelector(":scope > input, :scope > * > input, :scope > textarea, :scope > * > textarea")
+        )
+          el.dataset.midnight = "field";
+        else if (el.tagName === "BUTTON" || el.getAttribute("role") === "button")
+          el.dataset.midnight = "control";
+        else if (parseFloat(cs.borderTopLeftRadius) >= 999 && height <= 28 && el.textContent)
+          el.dataset.midnight = "chip";
         else if (height >= 40) el.dataset.midnight = "card";
       } else if (cs.backgroundColor === KEY_BACKGROUND && el.textContent && el.closest("button")) {
         el.dataset.midnight = "key";
@@ -454,13 +471,17 @@ export default function contribute(client: PluginClientContext) {
     markSelection();
   };
   const markSelection = () => {
-    document.querySelectorAll<HTMLElement>('[data-testid="settings-sidebar"] button, [data-testid="command-center-results"] button').forEach((el) => {
-      const selected = getComputedStyle(el).backgroundColor !== "rgba(0, 0, 0, 0)";
-      if (selected !== "midnightSelected" in el.dataset) {
-        if (selected) el.dataset.midnightSelected = "";
-        else delete el.dataset.midnightSelected;
-      }
-    });
+    document
+      .querySelectorAll<HTMLElement>(
+        '[data-testid="settings-sidebar"] button, [data-testid="command-center-results"] button',
+      )
+      .forEach((el) => {
+        const selected = getComputedStyle(el).backgroundColor !== "rgba(0, 0, 0, 0)";
+        if (selected !== "midnightSelected" in el.dataset) {
+          if (selected) el.dataset.midnightSelected = "";
+          else delete el.dataset.midnightSelected;
+        }
+      });
   };
   const throttle = (run: () => void) => {
     let scheduled = false;
@@ -473,7 +494,8 @@ export default function contribute(client: PluginClientContext) {
       });
     };
   };
-  const selectionObserver = typeof MutationObserver === "undefined" ? null : new MutationObserver(throttle(markSelection));
+  const selectionObserver =
+    typeof MutationObserver === "undefined" ? null : new MutationObserver(throttle(markSelection));
   // Paseo shows a hovered button only by tinting its background, so a button that gains a tint under
   // the pointer is raised like a selected one.
   let hovered: HTMLElement | null = null;

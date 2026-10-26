@@ -43,9 +43,9 @@ visual, reload the plugin and confirm in Paseo before claiming it works.
 - **Node strip-only TypeScript.** Types are erased, not compiled: no `enum`, no
   constructor **parameter properties**, no `namespace`. Write a plain field and
   assign it in the constructor body.
-- **Prettier**, `printWidth` 110 (`.prettierrc.json`). Run it on files you touch.
+- **Prettier**, `printWidth` 110 (configured once at the repository root). Run it on files you touch.
 - **Conventional Commits**, subject lowercased, ≤ 100 chars. Enforced by
-  `.githooks/commit-msg` (installed via `npm install`'s `prepare`).
+  the root `.githooks/commit-msg` (installed via `npm install`'s `prepare`).
 - **Self-documenting code.** The codebase is clean and comment-free; code should be self-explanatory through clear naming and structure.
 - **English everywhere** in code, documentation and commits.
 - Prefer small, surgical changes; do not reformat or refactor code you are not

@@ -1,0 +1,66 @@
+name: Bug Report
+description: Report a problem in a plugin or tool
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not report security vulnerabilities here, see [SECURITY.md](../blob/main/SECURITY.md).
+        Never paste a real token, private URL, or internal hostname.
+  - type: dropdown
+    id: package
+    attributes:
+      label: Package
+      options:
+        - paseo-gitlab
+        - paseo-usage-sidebar
+        - paseo-midnight-theme
+        - paseo-retro-theme
+        - paseo-fleet
+        - paseo-slack
+    validations:
+      required: true
+  - type: input
+    id: package-version
+    attributes:
+      label: Package version
+      description: From the package's package.json, or the commit you are on.
+    validations:
+      required: true
+  - type: input
+    id: paseo-version
+    attributes:
+      label: Paseo version
+      placeholder: "0.12.0"
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: OS
+      placeholder: "macOS 15.4 / Windows 11 / Ubuntu 24.04"
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      value: |
+        1.
+        2.
+        3.
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Output of `paseo plugin logs <id>` or the tool's own error output.
+      render: text

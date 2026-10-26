@@ -90,7 +90,7 @@ paseo plugin update usage-sidebar
 
 ## 🤝 贡献与反馈
 
-欢迎提交 Issue 和 Pull Request——提交前请看 [CONTRIBUTING.zh-CN.md](./CONTRIBUTING.zh-CN.md)，里面写了要跑什么以及提交信息怎么写。如果你觉得这个插件对你有帮助，请给一个 ⭐️ 支持一下。
+欢迎提交 Issue 和 Pull Request——提交前请看 [CONTRIBUTING.md](../../CONTRIBUTING.md)（英文），里面写了要跑什么以及提交信息怎么写。如果你觉得这个插件对你有帮助，请给一个 ⭐️ 支持一下。
 
 ---
 

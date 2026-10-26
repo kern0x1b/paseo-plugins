@@ -84,7 +84,7 @@ use the id `usage-sidebar`:
 
 ```bash
 paseo plugin remove usage-sidebar
-paseo plugin add https://github.com/kern0x1b/paseo-usage-sidebar.git
+paseo plugin add git:kern0x1b/paseo-plugins:plugins/paseo-usage-sidebar
 ```
 
 Update with `paseo plugin update usage-sidebar`.
@@ -102,7 +102,7 @@ npm run typecheck
 npm test
 ```
 
-Commits follow Conventional Commits; see [CONTRIBUTING.md](./CONTRIBUTING.md).
+Commits follow Conventional Commits; see [CONTRIBUTING.md](../../CONTRIBUTING.md) and [docs/development.md](docs/development.md).
 
 ## Project docs
 

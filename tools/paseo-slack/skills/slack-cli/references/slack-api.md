@@ -13,11 +13,11 @@ Full documentation is available in `docs/slack-api-reference.md`.
 | `chat.getPermalink`     | Get permalink            | `slack api chat.getPermalink channel=C0123 message_ts=172...`              |
 | `conversations.history` | Channel history          | `slack api conversations.history channel=D0123 limit=10`                   |
 | `conversations.replies` | Thread replies           | `slack api conversations.replies channel=D0123 ts=172...`                  |
-| `conversations.open`    | Open DM with user        | `slack api conversations.open users=U0987654321`                             |
+| `conversations.open`    | Open DM with user        | `slack api conversations.open users=U0987654321`                           |
 | `conversations.list`    | List channels            | `slack api conversations.list types=public_channel,im`                     |
-| `users.info`            | Get user profile         | `slack api users.info user=U0987654321`                                      |
+| `users.info`            | Get user profile         | `slack api users.info user=U0987654321`                                    |
 | `users.lookupByEmail`   | Find user by email       | `slack api users.lookupByEmail email=name@company.com`                     |
-| `users.getPresence`     | Check online status      | `slack api users.getPresence user=U0987654321`                               |
+| `users.getPresence`     | Check online status      | `slack api users.getPresence user=U0987654321`                             |
 | `search.messages`       | Full-text search         | `slack api search.messages query="keyword from:@user"`                     |
 | `reactions.add`         | Add emoji reaction       | `slack api reactions.add channel=D0123 timestamp=172... name=eyes`         |
 | `reactions.remove`      | Remove reaction          | `slack api reactions.remove channel=D0123 timestamp=172... name=eyes`      |

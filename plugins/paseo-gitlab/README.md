@@ -45,13 +45,12 @@ nor a browser tab.
 The plugin is a directory, not a published package. Point Paseo at a checkout:
 
 ```bash
-git clone https://github.com/kern0x1b/paseo-gitlab.git
-cd paseo-gitlab
-npm install            # dev-time types only; nothing ships to the client
-paseo plugin add ./paseo-gitlab
+paseo plugin add git:kern0x1b/paseo-plugins:plugins/paseo-gitlab
 ```
 
-`paseo plugin reload gitlab` picks up local changes without restarting Paseo.
+To work on it, clone [paseo-plugins](https://github.com/kern0x1b/paseo-plugins), run `npm install` at the
+repository root, and `paseo plugin add ./plugins/paseo-gitlab`. `paseo plugin reload gitlab` picks up
+local changes without restarting Paseo.
 
 Requires Paseo `>= 0.9.0` (see `paseo-plugin.json`).
 
@@ -354,19 +353,19 @@ paseo plugin reload gitlab
 
 - **Node's strip-only TypeScript**: no enums, no parameter properties, no
   namespaces — types are erased, not compiled.
-- **Prettier** with `printWidth` 110 (`.prettierrc.json`).
+- **Prettier** with `printWidth` 110, configured once at the repository root.
 - Commits follow **Conventional Commits**, enforced by a POSIX `commit-msg` hook in
-  `.githooks` (wired up by `npm install`).
+  `.githooks` at the repository root (wired up by `npm install`).
 - Tests use `node --test` with a small loader and **never hit the network**: GitLab
   is faked at the `fetch` boundary, which is also how demo mode works.
 
 See [AGENTS.md](AGENTS.md) for the conventions an agent (or a new contributor)
-should follow when changing this repo, and [CONTRIBUTING.md](CONTRIBUTING.md) for
+should follow when changing this repo, and [CONTRIBUTING.md](../../CONTRIBUTING.md) for
 how to set up, test and open a pull request.
 
 - **Changes**: [CHANGELOG.md](CHANGELOG.md)
-- **Reporting a vulnerability**: [SECURITY.md](SECURITY.md)
-- **Community expectations**: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+- **Reporting a vulnerability**: [SECURITY.md](../../SECURITY.md); design notes in [docs/security-model.md](docs/security-model.md)
+- **Community expectations**: [CODE_OF_CONDUCT.md](../../CODE_OF_CONDUCT.md)
 
 ## License
 
