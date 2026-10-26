@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PaseoFleetChannelsManifest",
+  "type": "object",
+  "required": ["version", "channels"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "primary_channel": {
+      "type": "string",
+      "description": "Identifier of the default channel for proactive alerts"
+    },
+    "channels": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["type"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["chat", "forge", "webhook", "email", "local"]
+          },
+          "mcp_tool": {
+            "type": "string",
+            "description": "Name of the MCP tool used to send messages to this channel"
+          },
+          "cli_command": {
+            "type": "string",
+            "description": "CLI command used to dispatch messages to this channel"
+          },
+          "instance": {
+            "type": "string",
+            "description": "Instance host URL or workspace ID"
+          },
+          "scope": {
+            "type": "string",
+            "description": "Default repository, project path, or channel ID"
+          },
+          "description": {
+            "type": "string",
+            "description": "Human-readable description of this channel"
+          },
+          "default_target": {
+            "type": "object",
+            "description": "Default destination (e.g. channel ID or user ID)"
+          },
+          "capabilities": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}
