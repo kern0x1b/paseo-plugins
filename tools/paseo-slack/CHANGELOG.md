@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Moved into the [paseo-plugins](https://github.com/kern0x1b/paseo-plugins) monorepo. Install with `paseo plugin add git:kern0x1b/paseo-plugins:tools/paseo-slack`.
+- Moved into the [paseo-plugins](https://github.com/kern0x1b/paseo-plugins) monorepo as `tools/paseo-slack`. It is a command-line tool, not a Paseo plugin.
 
 ### Added
 

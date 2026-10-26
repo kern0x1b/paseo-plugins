@@ -70,3 +70,34 @@ export function validateEventEnvelope(envelope) {
 
   return { valid: true };
 }
+
+export function validateSnapshotDocument(document) {
+  if (!document || typeof document !== 'object') {
+    return { valid: false, error: 'Snapshot must be an object' };
+  }
+  if (document.protocol !== PROTOCOL_VERSION) {
+    return { valid: false, error: `Invalid protocol: expected ${PROTOCOL_VERSION}` };
+  }
+  if (!document.source || typeof document.source !== 'string') {
+    return { valid: false, error: 'Missing or invalid source' };
+  }
+  if (!document.generated_at || Number.isNaN(Date.parse(document.generated_at))) {
+    return { valid: false, error: 'Missing or invalid generated_at' };
+  }
+  if (!Array.isArray(document.items)) {
+    return { valid: false, error: 'items must be an array' };
+  }
+  if (document.errors !== undefined && !Array.isArray(document.errors)) {
+    return { valid: false, error: 'errors must be an array if provided' };
+  }
+  for (const [index, item] of document.items.entries()) {
+    const result = validateEventEnvelope(item);
+    if (!result.valid) {
+      return { valid: false, error: `items[${index}]: ${result.error}` };
+    }
+    if (!Array.isArray(item.snapshot?.reasons) || item.snapshot.reasons.length === 0) {
+      return { valid: false, error: `items[${index}]: snapshot.reasons must be a non-empty array` };
+    }
+  }
+  return { valid: true };
+}

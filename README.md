@@ -27,6 +27,13 @@ Standalone tools that are not Paseo plugins.
 | [`tools/paseo-fleet`](tools/paseo-fleet) | Coordinator, Worker and Reviewer skills plus an event protocol  |
 | [`tools/paseo-slack`](tools/paseo-slack) | Mini Slack in Paseo: Web API access, event router and MCP tools |
 
+## Connecting another platform
+
+`tools/paseo-fleet` defines how platforms push events to an agent Coordinator, and Slack and GitLab are
+the two reference adapters. To add Microsoft Teams, Jira or anything else, follow the
+[adapter author guide](tools/paseo-fleet/protocol/author-guide.md): it lists every command an adapter
+provides, the event envelope, subscriptions, and a Teams mapping. `fleet validate` checks the result.
+
 ## Development
 
 One `npm install` at the root sets up every package.

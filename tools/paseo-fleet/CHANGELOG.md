@@ -7,12 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-
-- Moved into the [paseo-plugins](https://github.com/kern0x1b/paseo-plugins) monorepo. Install with `paseo plugin add git:kern0x1b/paseo-plugins:tools/paseo-fleet`.
-
 ### Added
 
+- `fleet validate [file|-]`: checks an event envelope or a snapshot document against the protocol.
+- Adapter author guide rewritten as the full adapter contract, with a Microsoft Teams mapping.
 - `fleet sweep`: collects `snapshot` output from every adapter, merges items by `urn`, and keeps a cursor (`lastSweepAt`) with a 24-hour minimum lookback.
 - Snapshot (pull) contract in the protocol specification and the adapter author guide.
 - Coordinator startup sweep: verification rules, ordering and plan format (`skills/coordinator/references/startup-sweep.md`).
@@ -21,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `start-fleet-coordinator` sweeps, verifies and plans waiting work before listening for events.
 - Coordinator Authority Rules: outbound writes (messages, comments, pushes, merge requests, merges) require explicit user approval of the draft.
+- `fleet activate`, `stop`, `status` and `coordinator set` drive every adapter in `config.adapters` instead of hardcoded Slack and GitLab; extra daemon flags go in `adapterDaemonArgs`.
+- The CLI and config tests run against a temporary `HOME`. They used to overwrite the real fleet and adapter coordinator IDs.
+- Moved into the [paseo-plugins](https://github.com/kern0x1b/paseo-plugins) monorepo as `tools/paseo-fleet`. It is a command-line tool, not a Paseo plugin.
 
 ## 1.0.0 - 2026-10-02
 

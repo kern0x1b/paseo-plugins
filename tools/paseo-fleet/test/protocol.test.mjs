@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { PROTOCOL_VERSION, createEventEnvelope, validateEventEnvelope } from '../src/protocol.js';
+import {
+  PROTOCOL_VERSION,
+  createEventEnvelope,
+  validateEventEnvelope,
+  validateSnapshotDocument,
+} from '../src/protocol.js';
 
 describe('Paseo Fleet Protocol', () => {
   it('creates a standard event envelope', () => {
@@ -62,5 +67,50 @@ describe('Paseo Fleet Protocol', () => {
     assert.throws(() => createEventEnvelope({}), /source is required/);
     assert.throws(() => createEventEnvelope({ source: 'slack' }), /event_type is required/);
     assert.throws(() => createEventEnvelope({ source: 'slack', event_type: 'dm' }), /content is required/);
+  });
+});
+
+describe('Snapshot document validation', () => {
+  const item = () => ({
+    ...createEventEnvelope({
+      source: 'teams',
+      event_type: 'unanswered_dm',
+      content: 'Can you review this?',
+      reply_action: { type: 'mcp', tool: 'teams_send_message', params: { chat_id: '19:abc' } },
+    }),
+    snapshot: { reasons: ['unanswered_dm'], state: { messageCount: 2 } },
+  });
+  const document = (overrides = {}) => ({
+    protocol: PROTOCOL_VERSION,
+    source: 'teams',
+    generated_at: '2026-10-26T08:00:00.000Z',
+    items: [item()],
+    errors: [],
+    ...overrides,
+  });
+
+  it('accepts a well-formed snapshot', () => {
+    assert.deepEqual(validateSnapshotDocument(document()), { valid: true });
+  });
+
+  it('accepts an empty snapshot with a failing source reported', () => {
+    const result = validateSnapshotDocument(
+      document({ items: [], errors: [{ source: 'chats', error: 'Graph API error 503' }] }),
+    );
+    assert.equal(result.valid, true);
+  });
+
+  it('rejects an item without snapshot reasons', () => {
+    const broken = { ...item(), snapshot: { reasons: [] } };
+    const result = validateSnapshotDocument(document({ items: [broken] }));
+    assert.equal(result.valid, false);
+    assert.match(result.error, /items\[0\].*reasons/);
+  });
+
+  it('rejects an item that is not a valid envelope', () => {
+    const broken = { ...item(), reply_action: undefined };
+    const result = validateSnapshotDocument(document({ items: [broken] }));
+    assert.equal(result.valid, false);
+    assert.match(result.error, /items\[0\].*reply_action/);
   });
 });
