@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { messagesFor } from "../shared/i18n/messages";
 import { formatRemainingCompact, windowTone, windowUsedPct } from "../shared/usage/format";
-import { windowShortLabel } from "../shared/usage/window-label";
+import { windowLabel, windowShortLabel } from "../shared/usage/window-label";
 
 const window = (id: string, label = "") => ({ id, label });
 
@@ -17,6 +17,29 @@ describe("windowShortLabel", () => {
     assert.equal(windowShortLabel(window("weekly", "Weekly")), "1W");
     assert.equal(windowShortLabel(window("weekly_model_fable", "Weekly · Fable")), "1W");
     assert.equal(windowShortLabel(window("interval_x", "Interval X")), "Interval X");
+  });
+});
+
+describe("windowLabel", () => {
+  /**
+   * Codex's card names its *primary* window `session`, and the length of that
+   * window depends on the plan. Captured from
+   * `chatgpt.com/backend-api/wham/usage` on 2026-10-05 for a `go` plan:
+   * `primary_window` was `limit_window_seconds: 2592000` (30 days) with
+   * `secondary_window: null`, so mapping `session` onto the 5-hour message
+   * labelled a monthly window as a five-hour one.
+   */
+  it("leaves Codex's session window under the daemon's own label", () => {
+    const codexSession = window("session", "Session");
+
+    assert.equal(windowLabel(codexSession, messagesFor("en")), "Session");
+    assert.equal(windowShortLabel(codexSession), "Session");
+    assert.notEqual(windowLabel(codexSession, messagesFor("en")), "5-hour session");
+  });
+
+  it("still localizes the ids it does model", () => {
+    assert.equal(windowLabel(window("five_hour", "Session"), messagesFor("en")), "5-hour session");
+    assert.equal(windowLabel(window("five_hour", "Session"), messagesFor("ru")), "Сессия 5 ч");
   });
 });
 

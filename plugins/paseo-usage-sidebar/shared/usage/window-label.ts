@@ -37,6 +37,7 @@ function modelSuffix(window: UsageWindow): string | null {
 }
 
 export function windowLabel(window: UsageWindow, messages: Messages): string {
+  // Codex's `session` id is NOT mapped to the 5-hour window; see the note above.
   if (window.id === "five_hour") {
     return messages.windowFiveHour;
   }
@@ -80,6 +81,15 @@ export function windowLabel(window: UsageWindow, messages: Messages): string {
  * A code short enough for a meter column: `5H`, `1W`, `1D`, `1M`.
  * Pure period code — the model family is shown in the group subheader, never on
  * the limit line, so the percentage and reset countdown have full room.
+ *
+ * `session` is deliberately absent from both tables below, and must stay that
+ * way. Paseo names Codex's *primary* window `session`, but that window is
+ * whatever the plan's primary limit is: measured live against
+ * `chatgpt.com/backend-api/wham/usage` on 2026-10-05, a `go` plan answers with
+ * `primary_window.limit_window_seconds: 2592000` (30 days) and
+ * `secondary_window: null`, so coding it `5H` labels a monthly window as a
+ * five-hour one. The daemon does not forward the length that would settle it,
+ * so the daemon's own label is the honest answer.
  */
 export function windowShortLabel(window: UsageWindow): string {
   if (window.id === "five_hour" || window.id.startsWith("five_hour_")) {

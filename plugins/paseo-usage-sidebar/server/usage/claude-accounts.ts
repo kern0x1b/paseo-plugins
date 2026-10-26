@@ -9,6 +9,7 @@ import {
   type UsageTone,
   type UsageWindow,
 } from "../../shared/usage/contract";
+import { hasReading } from "../../shared/usage/preserve";
 
 /**
  * The daemon's quota fetcher knows exactly one Claude account: `~/.claude` or the
@@ -294,11 +295,25 @@ async function fetchAccountUsage(account: ClaudeAccount, deps: ClaudeAccountDeps
 
 type CacheEntry = {
   key: string;
-  fetchedAtMs: number;
+  /** When this entry stops answering, in `deps.now()` terms. */
+  expiresAtMs: number;
   usage: Promise<ProviderUsage>;
   /** Earliest window reset in the answer, once it arrives; a cache older than that is stale. */
   nextResetMs: number;
 };
+
+/**
+ * How long a *failed* fetch is held before it is tried again.
+ *
+ * The success TTL is five minutes because that is how long a plan window holds
+ * still. A failure is worth retrying much sooner, and holding one for the full
+ * TTL is what makes a rate limit look like a provider being switched off: the
+ * card stays empty for five minutes after a single 429 even though the limit
+ * clears in seconds. A minute is long enough not to hammer an endpoint that is
+ * already refusing, and short enough that recovery is visible on the next poll
+ * or two rather than five minutes later.
+ */
+const FAILURE_RETRY_MS = 60_000;
 
 const cache = new Map<string, CacheEntry>();
 
@@ -324,20 +339,27 @@ export async function listClaudeAccountUsage(
     accounts.map((account) => {
       const key = `${account.displayName}\0${account.configDir}`;
       const cached = cache.get(account.providerId);
-      if (
-        cached &&
-        cached.key === key &&
-        nowMs - cached.fetchedAtMs < CACHE_TTL_MS &&
-        nowMs < cached.nextResetMs
-      ) {
+      if (cached && cached.key === key && nowMs < cached.expiresAtMs && nowMs < cached.nextResetMs) {
         return cached.usage;
       }
       const usage = fetchAccountUsage(account, deps).catch((error: unknown) =>
         unavailable(account, error instanceof Error ? error.message : String(error)),
       );
-      const entry: CacheEntry = { key, fetchedAtMs: nowMs, usage, nextResetMs: Number.POSITIVE_INFINITY };
+      const entry: CacheEntry = {
+        key,
+        expiresAtMs: nowMs + CACHE_TTL_MS,
+        usage,
+        nextResetMs: Number.POSITIVE_INFINITY,
+      };
       void usage.then((resolved) => {
         entry.nextResetMs = earliestReset(resolved);
+        // A failed or empty fetch is retried on the short clock instead of the
+        // success TTL, so one 429 costs a minute of stale numbers rather than
+        // five. The card itself keeps whatever it last read (see
+        // shared/usage/preserve.ts) — this only bounds how long it stays empty.
+        if (!hasReading(resolved)) {
+          entry.expiresAtMs = deps.now() + FAILURE_RETRY_MS;
+        }
       });
       cache.set(account.providerId, entry);
       return usage;
