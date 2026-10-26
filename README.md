@@ -15,7 +15,6 @@ paseo plugin add git:kern0x1b/paseo-plugins:plugins/<name>
 | [`plugins/paseo-gitlab`](plugins/paseo-gitlab)                 | Mini GitLab in Paseo: explorer UI, CLI, event router and MCP server |
 | [`plugins/paseo-usage-sidebar`](plugins/paseo-usage-sidebar)   | Provider plan usage in the sidebar, matching Settings → Usage       |
 | [`plugins/paseo-midnight-theme`](plugins/paseo-midnight-theme) | Dark theme with a warm near-black background                        |
-| [`plugins/paseo-retro-theme`](plugins/paseo-retro-theme)       | Green phosphor CRT terminal theme                                   |
 
 Use `--ref <branch|tag|commit>` to pick a version for the first install.
 

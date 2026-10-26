@@ -15,7 +15,6 @@ body:
         - paseo-gitlab
         - paseo-usage-sidebar
         - paseo-midnight-theme
-        - paseo-retro-theme
         - paseo-fleet
         - paseo-slack
     validations:
