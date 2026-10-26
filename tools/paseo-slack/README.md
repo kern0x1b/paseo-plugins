@@ -46,7 +46,7 @@ Operates directly as your authentic Slack user identity with zero bot badges, su
   - **Default Route**: All other incoming DMs and mentions route to the **Fleet Coordinator Agent**.
 - **Universal Slack API Access**: `slack api <method> [key=value...]` allows calling any of the 200+ Slack Web API endpoints.
 - **Built-in MCP Server**: `slack mcp` runs a standard stdio Model Context Protocol server exposing Slack tools directly to AI agents.
-- **Zero External Dependencies**: Pure modern Node.js 20+ ESM using native `fetch` and native `WebSocket`.
+- **Zero External Dependencies**: Pure modern Node.js 22+ ESM using native `fetch` and native `WebSocket`.
 
 ---
 

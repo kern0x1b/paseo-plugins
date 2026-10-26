@@ -15,13 +15,13 @@
     "url": "https://github.com/kern0x1b/paseo-plugins/issues"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22.0.0"
   },
   "exports": {
     ".": "./src/index.js",
     "./testing": "./src/testing.js"
   },
   "scripts": {
-    "test": "node --test test/"
+    "test": "node --test \"test/*.test.*\""
   }
 }

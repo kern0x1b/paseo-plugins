@@ -13,7 +13,7 @@
     "url": "https://github.com/kern0x1b/paseo-plugins/issues"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22.0.0"
   },
   "files": [
     "paseo-plugin.json",

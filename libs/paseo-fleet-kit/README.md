@@ -1,6 +1,6 @@
 # paseo-fleet-kit
 
-Shared building blocks for Paseo fleet adapters. Zero dependencies, Node 20+, ESM.
+Shared building blocks for Paseo fleet adapters. Zero dependencies, Node 22+, ESM.
 `paseo-slack` and `paseo-gitlab` are built on it, and so is any new adapter.
 The contract an adapter implements is in the
 [adapter author guide](../../tools/paseo-fleet/protocol/author-guide.md).

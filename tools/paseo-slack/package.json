@@ -14,7 +14,7 @@
     "url": "https://github.com/kern0x1b/paseo-plugins/issues"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22.0.0"
   },
   "bin": {
     "slack": "./bin/slack.js",
@@ -24,7 +24,7 @@
     "start": "node ./bin/slack.js",
     "daemon": "node ./bin/slack.js daemon",
     "mcp": "node ./bin/slack.js mcp",
-    "test": "node --test test/"
+    "test": "node --test \"test/*.test.*\""
   },
   "dependencies": {
     "paseo-fleet-kit": "*"

@@ -14,14 +14,14 @@
     "url": "https://github.com/kern0x1b/paseo-plugins/issues"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22.0.0"
   },
   "bin": {
     "fleet": "./bin/fleet.js",
     "paseo-fleet": "./bin/fleet.js"
   },
   "scripts": {
-    "test": "node --test test/"
+    "test": "node --test \"test/*.test.*\""
   },
   "dependencies": {
     "paseo-fleet-kit": "*"

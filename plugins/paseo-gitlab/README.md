@@ -5,7 +5,7 @@
 # GitLab for Paseo
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Node](https://img.shields.io/badge/Node-%E2%89%A520-3c873a.svg)](https://nodejs.org)
+[![Node](https://img.shields.io/badge/Node-%E2%89%A522-3c873a.svg)](https://nodejs.org)
 [![Tests: node --test](https://img.shields.io/badge/tests-node%20--test-brightgreen.svg)](test)
 [![Code style: Prettier](https://img.shields.io/badge/code%20style-prettier-ff69b4.svg)](https://prettier.io)
 
