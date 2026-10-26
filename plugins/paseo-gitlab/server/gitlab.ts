@@ -1,0 +1,113 @@
+export interface Connection {
+  host: string;
+  token: string;
+}
+
+export type Fetch = typeof fetch;
+
+const REQUEST_TIMEOUT_MS = 20_000;
+
+export class GitLabError extends Error {
+  readonly status: number | null;
+
+  constructor(message: string, status: number | null = null) {
+    super(message);
+    this.status = status;
+  }
+}
+
+function headers(connection: Connection): Record<string, string> {
+  return { Authorization: `Bearer ${connection.token}`, Accept: "application/json" };
+}
+
+function httpError(status: number): GitLabError {
+  if (status === 401) {
+    return new GitLabError("GitLab rejected the token. Reconnect in Settings → GitLab.", 401);
+  }
+  if (status === 403) {
+    return new GitLabError("The token is not allowed to do that (403).", 403);
+  }
+  return new GitLabError(`GitLab returned ${status}.`, status);
+}
+
+export async function rest<T>(connection: Connection, path: string, fetchImpl: Fetch = fetch): Promise<T> {
+  const response = await fetchImpl(`${connection.host}/api/v4${path}`, {
+    headers: headers(connection),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  });
+  if (!response.ok) {
+    throw httpError(response.status);
+  }
+  return (await response.json()) as T;
+}
+
+export async function graphql<T>(
+  connection: Connection,
+  query: string,
+  variables: Record<string, unknown>,
+  fetchImpl: Fetch = fetch,
+): Promise<T> {
+  const response = await fetchImpl(`${connection.host}/api/graphql`, {
+    method: "POST",
+    headers: { ...headers(connection), "Content-Type": "application/json" },
+    body: JSON.stringify({ query, variables }),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  });
+  if (!response.ok) {
+    throw httpError(response.status);
+  }
+  const body = (await response.json()) as { data?: T; errors?: { message: string }[] };
+  if (body.errors?.length) {
+    throw new GitLabError(body.errors.map((error) => error.message).join("; "));
+  }
+  if (!body.data) {
+    throw new GitLabError("GitLab returned an empty response.");
+  }
+  return body.data;
+}
+
+export function assertNoMutationErrors(
+  payload: { errors?: string[] } | null | undefined,
+  action: string,
+): void {
+  if (!payload) {
+    throw new GitLabError(`GitLab did not ${action}.`);
+  }
+  if (payload.errors?.length) {
+    throw new GitLabError(payload.errors.join("; "));
+  }
+}
+
+export async function restWrite<T>(
+  connection: Connection,
+  method: "POST" | "PUT" | "DELETE",
+  path: string,
+  body?: unknown,
+  fetchImpl: Fetch = fetch,
+): Promise<T | null> {
+  const response = await fetchImpl(`${connection.host}/api/v4${path}`, {
+    method,
+    headers: {
+      ...headers(connection),
+      ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  });
+  if (!response.ok) {
+    let detail = "";
+    try {
+      const parsed = (await response.json()) as { message?: unknown; error?: unknown };
+      detail =
+        typeof parsed.message === "string"
+          ? parsed.message
+          : typeof parsed.error === "string"
+            ? parsed.error
+            : "";
+    } catch {}
+    const error = httpError(response.status);
+    throw detail ? new GitLabError(`${error.message} ${detail}`, response.status) : error;
+  }
+  const text = await response.text();
+  return text ? (JSON.parse(text) as T) : null;
+}
