@@ -13,7 +13,13 @@ import { SelectionSchema, type Selection } from "../../shared/selection/contract
  * daemon-owned files, and replaced atomically so a crash mid-write cannot leave
  * a truncated file behind.
  */
-const EMPTY: Selection = { keys: [], configured: false, columns: 1, composerPill: true, collapsedProviders: [] };
+const EMPTY: Selection = {
+  keys: [],
+  configured: false,
+  columns: 1,
+  composerPill: true,
+  collapsedProviders: [],
+};
 
 function stateFile(): string {
   const base = process.env.XDG_STATE_HOME?.trim() || join(homedir(), ".local", "state");
@@ -46,7 +52,10 @@ export function writeSelectionState({
   const next: Selection = {
     ...current,
     ...(keys
-      ? { keys: [...new Set(keys.filter((key) => typeof key === "string" && key.length > 0))], configured: true }
+      ? {
+          keys: [...new Set(keys.filter((key) => typeof key === "string" && key.length > 0))],
+          configured: true,
+        }
       : {}),
     columns: columns ?? current.columns,
     composerPill: composerPill ?? current.composerPill,
@@ -66,7 +75,9 @@ export function writeSelectionState({
     // order, the write had failed, and the arrangement snapped back at the next
     // reload with nothing to explain it. Fail the RPC instead.
     console.error("[usage-sidebar] Could not persist the sidebar selection", error);
-    throw new Error(`Could not persist the sidebar selection: ${error instanceof Error ? error.message : error}`);
+    throw new Error(
+      `Could not persist the sidebar selection: ${error instanceof Error ? error.message : error}`,
+    );
   }
   console.log(
     `[usage-sidebar] Pinned rows saved: ${next.keys.join(", ") || "(none)"}, ${next.columns} column(s), ` +

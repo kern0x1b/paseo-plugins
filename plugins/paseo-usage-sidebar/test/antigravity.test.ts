@@ -39,14 +39,24 @@ const QUOTA_SUMMARY = {
     {
       displayName: "Gemini Models",
       buckets: [
-        { bucketId: "gemini-weekly", window: "weekly", resetTime: "2026-10-01T14:22:48Z", remainingFraction: 0.8324266 },
+        {
+          bucketId: "gemini-weekly",
+          window: "weekly",
+          resetTime: "2026-10-01T14:22:48Z",
+          remainingFraction: 0.8324266,
+        },
         { bucketId: "gemini-5h", window: "5h", resetTime: "2026-09-24T19:22:48Z", remainingFraction: 0 },
       ],
     },
     {
       displayName: "Claude and GPT models",
       buckets: [
-        { bucketId: "3p-weekly", window: "weekly", resetTime: "2026-10-01T17:51:55Z", remainingFraction: 0.6657841 },
+        {
+          bucketId: "3p-weekly",
+          window: "weekly",
+          resetTime: "2026-10-01T17:51:55Z",
+          remainingFraction: 0.6657841,
+        },
         { bucketId: "3p-5h", window: "5h", resetTime: "2026-09-24T22:51:55Z" },
       ],
     },
@@ -100,28 +110,26 @@ describe("listAntigravityUsage", () => {
     const { listAntigravityUsage } = await freshModule();
     assert.deepEqual(await listAntigravityUsage(deps(configWith({})).value), []);
     assert.deepEqual(
-      await listAntigravityUsage(
-        deps(configWith({ "antigravity-cli": { enabled: false } })).value,
-      ),
+      await listAntigravityUsage(deps(configWith({ "antigravity-cli": { enabled: false } })).value),
       [],
     );
     assert.deepEqual(await listAntigravityUsage(deps(configWith(ENABLED), { platform: "linux" }).value), []);
   });
 
   it("is unavailable without a login and an error card on a server failure", async () => {
-    const noLogin = await (await freshModule()).listAntigravityUsage(
-      deps(configWith(ENABLED), { keychain: null }).value,
-    );
+    const noLogin = await (
+      await freshModule()
+    ).listAntigravityUsage(deps(configWith(ENABLED), { keychain: null }).value);
     assert.equal(noLogin[0]?.status, "unavailable");
 
-    const expired = await (await freshModule()).listAntigravityUsage(
-      deps(configWith(ENABLED), { status: 401 }).value,
-    );
+    const expired = await (
+      await freshModule()
+    ).listAntigravityUsage(deps(configWith(ENABLED), { status: 401 }).value);
     assert.equal(expired[0]?.status, "unavailable");
 
-    const failed = await (await freshModule()).listAntigravityUsage(
-      deps(configWith(ENABLED), { status: 503 }).value,
-    );
+    const failed = await (
+      await freshModule()
+    ).listAntigravityUsage(deps(configWith(ENABLED), { status: 503 }).value);
     assert.equal(failed[0]?.status, "error");
     assert.match(failed[0]?.error ?? "", /503/);
   });

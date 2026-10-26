@@ -135,7 +135,8 @@ function paintedBackground(anchor: Element): [number, number, number] | null {
   let current: Element | null = anchor;
   while (current) {
     const parsed = parseColor(getComputedStyle(current).backgroundColor);
-    const spansMoreThanARow = rowHeight <= 0 || current.getBoundingClientRect().height > rowHeight * ROW_HEIGHT_SLACK;
+    const spansMoreThanARow =
+      rowHeight <= 0 || current.getBoundingClientRect().height > rowHeight * ROW_HEIGHT_SLACK;
     if (parsed && parsed.alpha > 0.05 && spansMoreThanARow) {
       return parsed.rgb;
     }
@@ -246,7 +247,12 @@ function familyOf(window: UsageWindow, messages: Messages): string | null {
  */
 function toGroups(snapshot: UsageSnapshot, selection: Selection, messages: Messages): MeterGroup[] {
   const groups: MeterGroup[] = [];
-  const rows = pinnedRows(snapshot, selection, (_provider, window) => windowLabel(window, messages), messages);
+  const rows = pinnedRows(
+    snapshot,
+    selection,
+    (_provider, window) => windowLabel(window, messages),
+    messages,
+  );
   for (const row of rows) {
     const entry: MeterRow = {
       label: row.label,
@@ -279,7 +285,13 @@ export function startSidebarMeter(client: PluginClientContext): PluginCleanup {
   /** The row the meter currently sits under; it changes when the plugin's own entry is hidden or shown. */
   let anchoredTo: Element | null = null;
   let snapshot: UsageSnapshot | null = null;
-  let selection: Selection = { keys: [], configured: false, columns: 1, composerPill: true, collapsedProviders: [] };
+  let selection: Selection = {
+    keys: [],
+    configured: false,
+    columns: 1,
+    composerPill: true,
+    collapsedProviders: [],
+  };
   let groups: MeterGroup[] = [];
   let stopped = false;
   let appearance: Appearance | null = null;
@@ -394,7 +406,8 @@ export function startSidebarMeter(client: PluginClientContext): PluginCleanup {
         selection = { ...selection, collapsedProviders: next };
         paint();
 
-        void client.rpc(writeSelection, { collapsedProviders: next })
+        void client
+          .rpc(writeSelection, { collapsedProviders: next })
           .then((saved) => {
             publishSelection(saved as Selection);
           })
@@ -451,15 +464,15 @@ export function startSidebarMeter(client: PluginClientContext): PluginCleanup {
 
           const label = document.createElement("span");
           label.textContent = familyGroup.family
-            ? (row.window.id.startsWith("five_hour")
-                ? messages.windowFiveHour
-                : row.window.id.startsWith("weekly")
-                  ? messages.windowWeekly
-                  : row.window.id.startsWith("daily")
-                    ? messages.windowDaily
-                    : row.window.id.startsWith("monthly")
-                      ? messages.windowMonthly
-                      : row.label)
+            ? row.window.id.startsWith("five_hour")
+              ? messages.windowFiveHour
+              : row.window.id.startsWith("weekly")
+                ? messages.windowWeekly
+                : row.window.id.startsWith("daily")
+                  ? messages.windowDaily
+                  : row.window.id.startsWith("monthly")
+                    ? messages.windowMonthly
+                    : row.label
             : row.label;
           label.style.cssText = `color:${labelColor};font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;`;
 
@@ -523,7 +536,8 @@ export function startSidebarMeter(client: PluginClientContext): PluginCleanup {
     const remaining = formatRemainingCompact(atRisk ? row.window.runsOutAt : row.window.resetsAt, messages);
 
     const head = document.createElement("div");
-    head.style.cssText = "display:flex;justify-content:space-between;gap:6px;align-items:baseline;white-space:nowrap;";
+    head.style.cssText =
+      "display:flex;justify-content:space-between;gap:6px;align-items:baseline;white-space:nowrap;";
 
     const reading = document.createElement("span");
     reading.style.cssText = `color:${labelColor};font-size:11px;flex-shrink:0;`;

@@ -2,7 +2,15 @@ import type { PluginTheme } from "@getpaseo/plugin";
 import { useRpc, type PluginSurfaceProps } from "@getpaseo/plugin/client";
 import { Icon } from "@getpaseo/plugin/client/react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import React, { Fragment, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import React, {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -101,7 +109,12 @@ function useStyles(theme: PluginTheme, compact: boolean, rtl: boolean) {
           marginBottom: SPACE[3],
           marginLeft: SPACE[1],
         },
-        sectionHeaderTitle: { color: theme.colors.foregroundMuted, fontSize: FONT.sm, writingDirection, textAlign },
+        sectionHeaderTitle: {
+          color: theme.colors.foregroundMuted,
+          fontSize: FONT.sm,
+          writingDirection,
+          textAlign,
+        },
         refreshButton: {
           flexDirection: row,
           alignItems: "center",
@@ -136,7 +149,13 @@ function useStyles(theme: PluginTheme, compact: boolean, rtl: boolean) {
           opacity: 0.96,
         },
         orderHandle: { paddingVertical: SPACE[1], paddingHorizontal: SPACE[1] },
-        orderLabel: { flex: 1, color: theme.colors.foreground, fontSize: FONT.sm, writingDirection, textAlign },
+        orderLabel: {
+          flex: 1,
+          color: theme.colors.foreground,
+          fontSize: FONT.sm,
+          writingDirection,
+          textAlign,
+        },
         orderValue: { color: theme.colors.foregroundMuted, fontSize: FONT.sm, writingDirection },
         orderButton: {
           width: 22,
@@ -171,7 +190,13 @@ function useStyles(theme: PluginTheme, compact: boolean, rtl: boolean) {
         columnsOptionActive: { backgroundColor: theme.colors.surface2 },
         columnsOptionLabel: { color: theme.colors.foregroundMuted, fontSize: FONT.sm },
         columnsOptionLabelActive: { color: theme.colors.foreground },
-        checkboxRow: { flexDirection: row, alignItems: "center", gap: SPACE[2], marginTop: SPACE[3], marginLeft: SPACE[1] },
+        checkboxRow: {
+          flexDirection: row,
+          alignItems: "center",
+          gap: SPACE[2],
+          marginTop: SPACE[3],
+          marginLeft: SPACE[1],
+        },
         checkbox: {
           width: 16,
           height: 16,
@@ -202,7 +227,13 @@ function useStyles(theme: PluginTheme, compact: boolean, rtl: boolean) {
         providerHeaderPressed: { opacity: 0.7 },
         collapseIconSlot: { width: 18, height: 18, alignItems: "center", justifyContent: "center" },
         popover: { width: 320 },
-        providerName: { flexShrink: 1, color: theme.colors.foreground, fontSize: FONT.base, writingDirection, textAlign },
+        providerName: {
+          flexShrink: 1,
+          color: theme.colors.foreground,
+          fontSize: FONT.base,
+          writingDirection,
+          textAlign,
+        },
         headerSpacer: { flex: 1 },
         planBadge: {
           paddingHorizontal: SPACE[2],
@@ -224,7 +255,13 @@ function useStyles(theme: PluginTheme, compact: boolean, rtl: boolean) {
           alignItems: "center",
           gap: SPACE[2],
         },
-        barLabel: { flexShrink: 1, color: theme.colors.foregroundMuted, fontSize: FONT.sm, writingDirection, textAlign },
+        barLabel: {
+          flexShrink: 1,
+          color: theme.colors.foregroundMuted,
+          fontSize: FONT.sm,
+          writingDirection,
+          textAlign,
+        },
         barValueGroup: { flexDirection: row, alignItems: "center", gap: SPACE[2], flexShrink: 0 },
         /**
          * A secondary toggle, sized to match the reorder block's arrows. Pinned state
@@ -245,16 +282,33 @@ function useStyles(theme: PluginTheme, compact: boolean, rtl: boolean) {
         barValue: { color: theme.colors.foreground, fontSize: FONT.sm, fontWeight: "500", writingDirection },
         barReset: { color: theme.colors.foregroundMuted, fontWeight: "normal" },
         barAtRisk: { color: theme.colors.statusDanger, fontWeight: "normal" },
-        track: { height: 4, borderRadius: 2, backgroundColor: theme.colors.surface2, overflow: "hidden", flexDirection: row },
+        track: {
+          height: 4,
+          borderRadius: 2,
+          backgroundColor: theme.colors.surface2,
+          overflow: "hidden",
+          flexDirection: row,
+        },
         fill: { height: 4, borderRadius: 2 },
 
         details: { gap: SPACE[1] },
         detailRow: { flexDirection: row, justifyContent: "space-between", gap: SPACE[2] },
-        detailLabel: { flexShrink: 1, color: theme.colors.foregroundMuted, fontSize: FONT.sm, writingDirection, textAlign },
+        detailLabel: {
+          flexShrink: 1,
+          color: theme.colors.foregroundMuted,
+          fontSize: FONT.sm,
+          writingDirection,
+          textAlign,
+        },
         detailValue: { color: theme.colors.foreground, fontSize: FONT.sm, writingDirection },
 
         providerError: { color: theme.colors.statusDanger, fontSize: FONT.sm, lineHeight: FONT.sm * 1.4 },
-        providerFooter: { color: theme.colors.foregroundMuted, fontSize: FONT.sm, writingDirection, textAlign },
+        providerFooter: {
+          color: theme.colors.foregroundMuted,
+          fontSize: FONT.sm,
+          writingDirection,
+          textAlign,
+        },
 
         stateCard: { padding: SPACE[4], alignItems: "center", gap: SPACE[3] },
         stateText: { color: theme.colors.foregroundMuted, fontSize: FONT.base, textAlign: "center" },
@@ -307,7 +361,9 @@ function WindowBar({
         <View style={styles.barValueGroup}>
           <Text style={styles.barValue}>
             {usedPct != null ? formatPct(usedPct, locale) : "—"}
-            {trailing ? <Text style={atRisk ? styles.barAtRisk : styles.barReset}>{` · ${trailing}`}</Text> : null}
+            {trailing ? (
+              <Text style={atRisk ? styles.barAtRisk : styles.barReset}>{` · ${trailing}`}</Text>
+            ) : null}
           </Text>
           {onTogglePin ? (
             <Pressable
@@ -331,7 +387,10 @@ function WindowBar({
       </View>
       <View style={styles.track}>
         <View
-          style={[styles.fill, { width: `${clampPct(usedPct ?? 0)}%`, backgroundColor: fillColor(theme, tone) }]}
+          style={[
+            styles.fill,
+            { width: `${clampPct(usedPct ?? 0)}%`, backgroundColor: fillColor(theme, tone) },
+          ]}
         />
       </View>
     </View>
@@ -369,10 +428,7 @@ function BalanceBar({
       {usedPct != null ? (
         <View style={styles.track}>
           <View
-            style={[
-              styles.fill,
-              { width: `${clampPct(usedPct)}%`, backgroundColor: fillColor(theme, tone) },
-            ]}
+            style={[styles.fill, { width: `${clampPct(usedPct)}%`, backgroundColor: fillColor(theme, tone) }]}
           />
         </View>
       ) : null}
@@ -648,7 +704,9 @@ function OrderBlock({
             <Text style={styles.orderLabel} numberOfLines={1}>
               {`${row.providerName} · ${row.label}`}
             </Text>
-            <Text style={styles.orderValue}>{row.usedPct != null ? formatPct(row.usedPct, locale) : "—"}</Text>
+            <Text style={styles.orderValue}>
+              {row.usedPct != null ? formatPct(row.usedPct, locale) : "—"}
+            </Text>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={messages.moveUp}
@@ -747,12 +805,7 @@ function ProviderBlock({
       <View style={styles.headerSpacer} />
       {status ? (
         <View style={styles.statusRow}>
-          <View
-            style={[
-              styles.statusDot,
-              provider.status === "error" ? styles.statusDotError : null,
-            ]}
-          />
+          <View style={[styles.statusDot, provider.status === "error" ? styles.statusDotError : null]} />
           <Text style={styles.statusLabel}>{status}</Text>
         </View>
       ) : null}
@@ -815,7 +868,9 @@ function ProviderBlock({
               locale={locale}
               messages={messages}
               pinned={pinnedKeys.has(rowKey(provider.providerId, window.id))}
-              onTogglePin={onTogglePin ? () => onTogglePin(rowKey(provider.providerId, window.id)) : undefined}
+              onTogglePin={
+                onTogglePin ? () => onTogglePin(rowKey(provider.providerId, window.id)) : undefined
+              }
             />
           ))}
           {provider.balances.map((balance) => (
@@ -1006,133 +1061,144 @@ export function UsageSurface({ theme, layout }: PluginSurfaceProps) {
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.column}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionHeaderTitle}>{messages.title}</Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={refreshing ? messages.refreshing : messages.refresh}
-            accessibilityState={{ busy: refreshing }}
-            onPress={() => void query.refetch()}
-            style={({ pressed }) => [styles.refreshButton, pressed ? styles.refreshButtonPressed : null]}
-          >
-            <View style={styles.refreshIcon}>
-              {refreshing ? (
-                <ActivityIndicator size="small" color={theme.colors.foregroundMuted} />
-              ) : (
-                <Icon name="RefreshCw" size={14} color={theme.colors.foregroundMuted} />
-              )}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionHeaderTitle}>{messages.title}</Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={refreshing ? messages.refreshing : messages.refresh}
+              accessibilityState={{ busy: refreshing }}
+              onPress={() => void query.refetch()}
+              style={({ pressed }) => [styles.refreshButton, pressed ? styles.refreshButtonPressed : null]}
+            >
+              <View style={styles.refreshIcon}>
+                {refreshing ? (
+                  <ActivityIndicator size="small" color={theme.colors.foregroundMuted} />
+                ) : (
+                  <Icon name="RefreshCw" size={14} color={theme.colors.foregroundMuted} />
+                )}
+              </View>
+              {/* The label never changes: swapping it for "Refreshing..." resizes the button under the cursor. */}
+              <Text style={styles.refreshLabel}>{messages.refresh}</Text>
+            </Pressable>
+          </View>
+
+          {query.isPending ? (
+            <View style={[styles.card, styles.stateCard]}>
+              <Text style={styles.stateText}>{messages.loading}</Text>
             </View>
-            {/* The label never changes: swapping it for "Refreshing..." resizes the button under the cursor. */}
-            <Text style={styles.refreshLabel}>{messages.refresh}</Text>
-          </Pressable>
-        </View>
+          ) : null}
 
-        {query.isPending ? (
-          <View style={[styles.card, styles.stateCard]}>
-            <Text style={styles.stateText}>{messages.loading}</Text>
-          </View>
-        ) : null}
-
-        {query.isError ? (
-          <View style={[styles.card, styles.stateCard]}>
-            <Text style={styles.stateTitle}>
-              {failure.linkLost ? messages.linkLostTitle : messages.errorTitle}
-            </Text>
-            <Text style={styles.stateText}>
-              {failure.linkLost ? messages.linkLostBody : errorMessage(query.error)}
-            </Text>
-            {/* A dropped session cannot be retried into working, so offering the
+          {query.isError ? (
+            <View style={[styles.card, styles.stateCard]}>
+              <Text style={styles.stateTitle}>
+                {failure.linkLost ? messages.linkLostTitle : messages.errorTitle}
+              </Text>
+              <Text style={styles.stateText}>
+                {failure.linkLost ? messages.linkLostBody : errorMessage(query.error)}
+              </Text>
+              {/* A dropped session cannot be retried into working, so offering the
                 button would just be a way to fail again. */}
-            {failure.showRetry ? (
-              <Pressable accessibilityRole="button" style={styles.retryButton} onPress={() => void query.refetch()}>
-                <Text style={styles.retryLabel}>{messages.retry}</Text>
-              </Pressable>
-            ) : null}
-          </View>
-        ) : null}
+              {failure.showRetry ? (
+                <Pressable
+                  accessibilityRole="button"
+                  style={styles.retryButton}
+                  onPress={() => void query.refetch()}
+                >
+                  <Text style={styles.retryLabel}>{messages.retry}</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          ) : null}
 
-        {!query.isPending && !query.isError && providers.length === 0 ? (
-          <View style={[styles.card, styles.stateCard]}>
-            <Text style={styles.stateText}>{messages.empty}</Text>
-          </View>
-        ) : null}
+          {!query.isPending && !query.isError && providers.length === 0 ? (
+            <View style={[styles.card, styles.stateCard]}>
+              <Text style={styles.stateText}>{messages.empty}</Text>
+            </View>
+          ) : null}
 
-        {providers.length > 0 ? (
-          <View style={styles.orderSection}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionHeaderTitle}>{messages.sidebarOrder}</Text>
-              <View style={styles.columnsControl}>
-                <Text style={styles.sectionHeaderTitle}>{messages.meterColumns}</Text>
-                <View style={styles.columnsOptions} accessibilityRole="radiogroup">
-                  {METER_COLUMN_OPTIONS.map((option) => {
-                    const active = option === (saveLayout.isPending ? (saveLayout.variables.columns ?? columns) : columns);
-                    return (
-                      <Pressable
-                        key={option}
-                        accessibilityRole="radio"
-                        accessibilityLabel={`${messages.meterColumns}: ${option}`}
-                        accessibilityState={{ checked: active }}
-                        onPress={() => saveLayout.mutate({ columns: option })}
-                        style={[styles.columnsOption, active ? styles.columnsOptionActive : null]}
-                      >
-                        <Text style={[styles.columnsOptionLabel, active ? styles.columnsOptionLabelActive : null]}>
-                          {option}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
+          {providers.length > 0 ? (
+            <View style={styles.orderSection}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionHeaderTitle}>{messages.sidebarOrder}</Text>
+                <View style={styles.columnsControl}>
+                  <Text style={styles.sectionHeaderTitle}>{messages.meterColumns}</Text>
+                  <View style={styles.columnsOptions} accessibilityRole="radiogroup">
+                    {METER_COLUMN_OPTIONS.map((option) => {
+                      const active =
+                        option ===
+                        (saveLayout.isPending ? (saveLayout.variables.columns ?? columns) : columns);
+                      return (
+                        <Pressable
+                          key={option}
+                          accessibilityRole="radio"
+                          accessibilityLabel={`${messages.meterColumns}: ${option}`}
+                          accessibilityState={{ checked: active }}
+                          onPress={() => saveLayout.mutate({ columns: option })}
+                          style={[styles.columnsOption, active ? styles.columnsOptionActive : null]}
+                        >
+                          <Text
+                            style={[
+                              styles.columnsOptionLabel,
+                              active ? styles.columnsOptionLabelActive : null,
+                            ]}
+                          >
+                            {option}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
                 </View>
               </View>
+              <OrderBlock
+                rows={pinned}
+                styles={styles}
+                theme={theme}
+                locale={locale}
+                messages={messages}
+                // The block arranges only the rows this snapshot resolved; the pins
+                // it could not see keep their places in the list that is saved.
+                onReorder={(visible) => commitOrder(reorderVisible(order, visible))}
+                onRemove={togglePin}
+              />
+              <Pressable
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: pillShown }}
+                onPress={() => saveLayout.mutate({ composerPill: !pillShown })}
+                style={styles.checkboxRow}
+              >
+                <View style={[styles.checkbox, pillShown ? styles.checkboxChecked : null]}>
+                  {pillShown ? <Icon name="Check" size={12} color={theme.colors.foreground} /> : null}
+                </View>
+                <Text style={styles.sectionHeaderTitle}>{messages.composerPillToggle}</Text>
+              </Pressable>
+              {savePins.isError || saveLayout.isError ? (
+                <Text style={styles.orderError}>{messages.pinSaveFailed}</Text>
+              ) : null}
             </View>
-            <OrderBlock
-              rows={pinned}
-              styles={styles}
-              theme={theme}
-              locale={locale}
-              messages={messages}
-              // The block arranges only the rows this snapshot resolved; the pins
-              // it could not see keep their places in the list that is saved.
-              onReorder={(visible) => commitOrder(reorderVisible(order, visible))}
-              onRemove={togglePin}
-            />
-            <Pressable
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: pillShown }}
-              onPress={() => saveLayout.mutate({ composerPill: !pillShown })}
-              style={styles.checkboxRow}
-            >
-              <View style={[styles.checkbox, pillShown ? styles.checkboxChecked : null]}>
-                {pillShown ? <Icon name="Check" size={12} color={theme.colors.foreground} /> : null}
-              </View>
-              <Text style={styles.sectionHeaderTitle}>{messages.composerPillToggle}</Text>
-            </Pressable>
-            {savePins.isError || saveLayout.isError ? (
-              <Text style={styles.orderError}>{messages.pinSaveFailed}</Text>
-            ) : null}
-          </View>
-        ) : null}
+          ) : null}
 
-        {providers.length > 0 ? (
-          <View style={styles.card}>
-            {providers.map((provider, index) => (
-              <Fragment key={provider.providerId}>
-                {index > 0 ? <View style={styles.divider} /> : null}
-                <ProviderBlock
-                  provider={provider}
-                  stale={failure.showingStale}
-                  theme={theme}
-                  styles={styles}
-                  locale={locale}
-                  messages={messages}
-                  pinnedKeys={pinnedKeys}
-                  onTogglePin={togglePin}
-                  collapsed={collapsedSet.has(provider.providerId)}
-                  onToggleCollapse={() => toggleCollapse(provider.providerId)}
-                />
-              </Fragment>
-            ))}
-          </View>
-        ) : null}
+          {providers.length > 0 ? (
+            <View style={styles.card}>
+              {providers.map((provider, index) => (
+                <Fragment key={provider.providerId}>
+                  {index > 0 ? <View style={styles.divider} /> : null}
+                  <ProviderBlock
+                    provider={provider}
+                    stale={failure.showingStale}
+                    theme={theme}
+                    styles={styles}
+                    locale={locale}
+                    messages={messages}
+                    pinnedKeys={pinnedKeys}
+                    onTogglePin={togglePin}
+                    collapsed={collapsedSet.has(provider.providerId)}
+                    onToggleCollapse={() => toggleCollapse(provider.providerId)}
+                  />
+                </Fragment>
+              ))}
+            </View>
+          ) : null}
         </View>
       </ScrollView>
     </View>

@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { afterEach, beforeEach, describe, it, mock } from "node:test";
 import { HOST_LINK_LOST_CODE, SUSPECT_GRACE_MS } from "../shared/usage/errors";
 
-type Reader = typeof import("../server/usage/read")["readUsage"];
+type Reader = (typeof import("../server/usage/read"))["readUsage"];
 
 /**
  * `readUsage` keeps the link-failure state in module scope (it has to outlive a

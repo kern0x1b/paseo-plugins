@@ -9,17 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
 - The panel under **Settings → Plan usage**, for setting the pins and columns up once
 - An Antigravity card: 5-hour and weekly windows for Gemini and for other models
 - Collapsible provider sections in the sidebar meter and Plan usage surface, with persisted collapsed state
 
 ### Fixed
+
 - Hiding the Plan usage entry in Paseo's sidebar settings no longer hides the meter: it moves under
   the lowest entry still shown
 
 ## [1.1.1] - 2026-09-23
 
 ### Added
+
 - **Extra Claude accounts**: reads plan usage for custom providers that `extend` `claude` with
   their own `CLAUDE_CONFIG_DIR`, which Paseo itself does not report — shown in the panel, the
   sidebar meter, and the composer
@@ -28,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fork README with a blurred overview screenshot; English and Simplified Chinese
 
 ### Security
+
 - Account config paths and Keychain identifiers are treated as sensitive and kept out of the
   repository, including tests and fixtures
 

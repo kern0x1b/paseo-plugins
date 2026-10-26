@@ -44,6 +44,6 @@ package keeps only its own code, `package.json`, `CHANGELOG.md` and docs. See
 
 ## License
 
-MIT, see [LICENSE](LICENSE). `plugins/paseo-usage-sidebar` is a fork of
-[RUIIIOVO/paseo-usage-sidebar](https://github.com/RUIIIOVO/paseo-usage-sidebar) and keeps its upstream
+MIT, see [LICENSE](LICENSE). `plugins/paseo-usage-sidebar` started as a fork of
+[RUIIIOVO/paseo-usage-sidebar](https://github.com/RUIIIOVO/paseo-usage-sidebar) and keeps the original
 license and copyright notice in its own `LICENSE`.

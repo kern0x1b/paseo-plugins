@@ -7,11 +7,7 @@ import type {
 import React, { type ComponentType } from "react";
 import { getLocale, subscribeLocale } from "../i18n/locale";
 import { formatPct, windowUsedPct } from "../../shared/usage/format";
-import {
-  listUsage,
-  type ProviderUsage,
-  type UsageSnapshot,
-} from "../../shared/usage/contract";
+import { listUsage, type ProviderUsage, type UsageSnapshot } from "../../shared/usage/contract";
 import { readSelection, type Selection } from "../../shared/selection/contract";
 import { getSelection, subscribeSelection } from "../selection/store";
 import { AccountUsagePopover } from "./usage-surface";
@@ -70,16 +66,11 @@ function pillLabel(provider: ProviderUsage | undefined, model: string | null): s
   }).join(" · ");
 }
 
-function pillTitle(
-  provider: ProviderUsage | undefined,
-  providerId: string,
-): string {
+function pillTitle(provider: ProviderUsage | undefined, providerId: string): string {
   if (!provider) {
     return providerId;
   }
-  return provider.planLabel
-    ? `${provider.displayName} · ${provider.planLabel}`
-    : provider.displayName;
+  return provider.planLabel ? `${provider.displayName} · ${provider.planLabel}` : provider.displayName;
 }
 
 export function startComposerPills(client: PluginClientContext): PluginCleanup {
@@ -92,17 +83,11 @@ export function startComposerPills(client: PluginClientContext): PluginCleanup {
   let enabled = getSelection()?.composerPill ?? true;
 
   /** One component per provider, so an update never swaps the popover's identity under an open pill. */
-  function popoverFor(
-    providerId: string,
-  ): ComponentType<PluginButtonContentProps> {
+  function popoverFor(providerId: string): ComponentType<PluginButtonContentProps> {
     let Popover = popovers.get(providerId);
     if (!Popover) {
       Popover = ({ theme, layout }: PluginButtonContentProps) => (
-        <AccountUsagePopover
-          providerId={providerId}
-          theme={theme}
-          layout={layout}
-        />
+        <AccountUsagePopover providerId={providerId} theme={theme} layout={layout} />
       );
       popovers.set(providerId, Popover);
     }
@@ -116,11 +101,7 @@ export function startComposerPills(client: PluginClientContext): PluginCleanup {
     const accountIds = new Set(enabled ? (snapshot?.accountProviderIds ?? []) : []);
     for (const [agentId, pill] of pills) {
       const agent = agents.get(agentId);
-      if (
-        !agent ||
-        agent.provider !== pill.providerId ||
-        !accountIds.has(agent.provider)
-      ) {
+      if (!agent || agent.provider !== pill.providerId || !accountIds.has(agent.provider)) {
         pill.registration.remove();
         pills.delete(agentId);
       }
@@ -129,9 +110,7 @@ export function startComposerPills(client: PluginClientContext): PluginCleanup {
       if (!accountIds.has(agent.provider)) {
         continue;
       }
-      const provider = snapshot?.providers.find(
-        (candidate) => candidate.providerId === agent.provider,
-      );
+      const provider = snapshot?.providers.find((candidate) => candidate.providerId === agent.provider);
       const label = pillLabel(provider, agent.model);
       const title = pillTitle(provider, agent.provider);
       const existing = pills.get(agentId);

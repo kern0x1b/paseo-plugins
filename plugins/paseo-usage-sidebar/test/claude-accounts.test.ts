@@ -37,7 +37,11 @@ const WORK_PROVIDER = {
 };
 
 const CREDENTIALS = JSON.stringify({
-  claudeAiOauth: { accessToken: "token-work", subscriptionType: "team", rateLimitTier: "default_claude_max_5x" },
+  claudeAiOauth: {
+    accessToken: "token-work",
+    subscriptionType: "team",
+    rateLimitTier: "default_claude_max_5x",
+  },
 });
 
 function deps(
@@ -142,14 +146,14 @@ describe("listClaudeAccountUsage", () => {
   });
 
   it("reports an expired token as unavailable and a server failure as an error", async () => {
-    const expired = await (await freshModule()).listClaudeAccountUsage(
-      deps(configWith({ "claude-work": WORK_PROVIDER }), { status: 401 }).value,
-    );
+    const expired = await (
+      await freshModule()
+    ).listClaudeAccountUsage(deps(configWith({ "claude-work": WORK_PROVIDER }), { status: 401 }).value);
     assert.equal(expired[0]?.status, "unavailable");
 
-    const failed = await (await freshModule()).listClaudeAccountUsage(
-      deps(configWith({ "claude-work": WORK_PROVIDER }), { status: 500 }).value,
-    );
+    const failed = await (
+      await freshModule()
+    ).listClaudeAccountUsage(deps(configWith({ "claude-work": WORK_PROVIDER }), { status: 500 }).value);
     assert.equal(failed[0]?.status, "error");
     assert.match(failed[0]?.error ?? "", /500/);
   });
@@ -185,13 +189,18 @@ describe("withClaudeAccounts", () => {
   it("places extra accounts right after the default Claude card", async () => {
     const { withClaudeAccounts } = await freshModule();
     const merged = withClaudeAccounts([card("claude"), card("codex")], [card("claude-work")]);
-    assert.deepEqual(merged.map((provider) => provider.providerId), ["claude", "claude-work", "codex"]);
+    assert.deepEqual(
+      merged.map((provider) => provider.providerId),
+      ["claude", "claude-work", "codex"],
+    );
   });
 
   it("appends when there is no default card and never duplicates a daemon provider", async () => {
     const { withClaudeAccounts } = await freshModule();
     assert.deepEqual(
-      withClaudeAccounts([card("codex")], [card("claude-work"), card("codex")]).map((provider) => provider.providerId),
+      withClaudeAccounts([card("codex")], [card("claude-work"), card("codex")]).map(
+        (provider) => provider.providerId,
+      ),
       ["codex", "claude-work"],
     );
   });

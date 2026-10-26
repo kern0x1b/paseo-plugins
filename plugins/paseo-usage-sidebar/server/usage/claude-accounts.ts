@@ -47,14 +47,9 @@ function paseoConfigPath(): string {
 
 function runSecurity(args: string[]): Promise<string | null> {
   return new Promise((done) => {
-    execFile(
-      "security",
-      args,
-      { timeout: KEYCHAIN_TIMEOUT_MS },
-      (error, stdout) => {
-        done(error ? null : stdout.trim() || null);
-      },
-    );
+    execFile("security", args, { timeout: KEYCHAIN_TIMEOUT_MS }, (error, stdout) => {
+      done(error ? null : stdout.trim() || null);
+    });
   });
 }
 
@@ -92,27 +87,14 @@ export function readClaudeAccounts(configPath: string): ClaudeAccount[] {
   const defaultDir = resolve(homedir(), ".claude");
   const accounts: ClaudeAccount[] = [];
   for (const [providerId, provider] of Object.entries(providers)) {
-    if (
-      !isRecord(provider) ||
-      provider.extends !== "claude" ||
-      provider.enabled === false
-    ) {
+    if (!isRecord(provider) || provider.extends !== "claude" || provider.enabled === false) {
       continue;
     }
-    const configDir = isRecord(provider.env)
-      ? provider.env.CLAUDE_CONFIG_DIR
-      : undefined;
-    if (
-      typeof configDir !== "string" ||
-      !configDir.trim() ||
-      resolve(configDir) === defaultDir
-    ) {
+    const configDir = isRecord(provider.env) ? provider.env.CLAUDE_CONFIG_DIR : undefined;
+    if (typeof configDir !== "string" || !configDir.trim() || resolve(configDir) === defaultDir) {
       continue;
     }
-    const label =
-      typeof provider.label === "string" && provider.label.trim()
-        ? provider.label
-        : providerId;
+    const label = typeof provider.label === "string" && provider.label.trim() ? provider.label : providerId;
     accounts.push({ providerId, displayName: label, configDir });
   }
   return accounts;
@@ -123,10 +105,7 @@ export function readClaudeAccounts(configPath: string): ClaudeAccount[] {
  * sha256 of `CLAUDE_CONFIG_DIR` whenever that variable is set.
  */
 export function keychainServiceFor(configDir: string): string {
-  const hash = createHash("sha256")
-    .update(configDir.normalize("NFC"))
-    .digest("hex")
-    .slice(0, 8);
+  const hash = createHash("sha256").update(configDir.normalize("NFC")).digest("hex").slice(0, 8);
   return `${KEYCHAIN_SERVICE}-${hash}`;
 }
 
@@ -141,12 +120,8 @@ function oauthFrom(raw: string | null): OAuthCredentials | null {
     return null;
   }
   try {
-    const oauth = (
-      JSON.parse(raw) as { claudeAiOauth?: Partial<OAuthCredentials> }
-    ).claudeAiOauth;
-    return typeof oauth?.accessToken === "string" && oauth.accessToken
-      ? (oauth as OAuthCredentials)
-      : null;
+    const oauth = (JSON.parse(raw) as { claudeAiOauth?: Partial<OAuthCredentials> }).claudeAiOauth;
+    return typeof oauth?.accessToken === "string" && oauth.accessToken ? (oauth as OAuthCredentials) : null;
   } catch {
     return null;
   }
@@ -158,10 +133,7 @@ function keychainAccount(): string {
   return /^[a-zA-Z0-9._-]+$/.test(user) ? user : "claude-code-user";
 }
 
-async function readCredentials(
-  configDir: string,
-  deps: ClaudeAccountDeps,
-): Promise<OAuthCredentials | null> {
+async function readCredentials(configDir: string, deps: ClaudeAccountDeps): Promise<OAuthCredentials | null> {
   const file = join(configDir, ".credentials.json");
   if (existsSync(file)) {
     const fromFile = oauthFrom(readFileSync(file, "utf8"));
@@ -186,15 +158,11 @@ async function readCredentials(
   return null;
 }
 
-function planLabel({
-  subscriptionType,
-  rateLimitTier,
-}: OAuthCredentials): string | null {
+function planLabel({ subscriptionType, rateLimitTier }: OAuthCredentials): string | null {
   if (!subscriptionType) {
     return null;
   }
-  const label =
-    subscriptionType.charAt(0).toUpperCase() + subscriptionType.slice(1);
+  const label = subscriptionType.charAt(0).toUpperCase() + subscriptionType.slice(1);
   const tier = rateLimitTier?.split("_").pop();
   return tier ? `${label} ${tier}` : label;
 }
@@ -207,17 +175,12 @@ export function toneFor(usedPct: number | null): UsageTone {
   return usedPct > 90 ? "danger" : usedPct >= 70 ? "warning" : "ok";
 }
 
-function toWindow(
-  id: string,
-  label: string,
-  source: unknown,
-): UsageWindow | null {
+function toWindow(id: string, label: string, source: unknown): UsageWindow | null {
   if (!isRecord(source)) {
     return null;
   }
   const raw = source.utilization ?? source.percent;
-  const usedPct =
-    raw == null || !Number.isFinite(Number(raw)) ? null : Number(raw);
+  const usedPct = raw == null || !Number.isFinite(Number(raw)) ? null : Number(raw);
   return {
     id,
     label,
@@ -245,9 +208,7 @@ const LEGACY_MODEL_WINDOWS = [
  * the two cards read alike and pins survive refreshes. A `limits[]` entry replaces
  * the legacy top-level key for the same model.
  */
-export function windowsFromResponse(
-  response: Record<string, unknown>,
-): UsageWindow[] {
+export function windowsFromResponse(response: Record<string, unknown>): UsageWindow[] {
   const unscoped = [
     toWindow("five_hour", "Session", response.five_hour),
     toWindow("weekly", "Weekly", response.seven_day),
@@ -255,31 +216,17 @@ export function windowsFromResponse(
   const scoped = new Map<string, UsageWindow | null>();
   for (const [field, name] of LEGACY_MODEL_WINDOWS) {
     const key = `model:${normalizeName(name)}`;
-    scoped.set(
-      key,
-      toWindow(
-        `weekly_model_${normalizeName(name)}`,
-        `Weekly · ${name}`,
-        response[field],
-      ),
-    );
+    scoped.set(key, toWindow(`weekly_model_${normalizeName(name)}`, `Weekly · ${name}`, response[field]));
   }
   for (const limit of Array.isArray(response.limits) ? response.limits : []) {
-    if (
-      !isRecord(limit) ||
-      limit.kind !== "weekly_scoped" ||
-      !isRecord(limit.scope)
-    ) {
+    if (!isRecord(limit) || limit.kind !== "weekly_scoped" || !isRecord(limit.scope)) {
       continue;
     }
     for (const dimension of ["model", "surface"] as const) {
       const entry = limit.scope[dimension];
-      const id =
-        isRecord(entry) && typeof entry.id === "string" ? entry.id.trim() : "";
+      const id = isRecord(entry) && typeof entry.id === "string" ? entry.id.trim() : "";
       const displayName =
-        isRecord(entry) && typeof entry.display_name === "string"
-          ? entry.display_name.trim()
-          : "";
+        isRecord(entry) && typeof entry.display_name === "string" ? entry.display_name.trim() : "";
       const name = displayName || id;
       if (!name) {
         continue;
@@ -287,24 +234,15 @@ export function windowsFromResponse(
       const key = `${dimension}:${normalizeName(name)}`;
       scoped.set(
         key,
-        toWindow(
-          `weekly_${dimension}_${id || normalizeName(name)}`,
-          `Weekly · ${name}`,
-          limit,
-        ),
+        toWindow(`weekly_${dimension}_${id || normalizeName(name)}`, `Weekly · ${name}`, limit),
       );
       break;
     }
   }
-  return [...unscoped, ...scoped.values()].filter(
-    (window): window is UsageWindow => window !== null,
-  );
+  return [...unscoped, ...scoped.values()].filter((window): window is UsageWindow => window !== null);
 }
 
-function unavailable(
-  account: ClaudeAccount,
-  error: string | null = null,
-): ProviderUsage {
+function unavailable(account: ClaudeAccount, error: string | null = null): ProviderUsage {
   return ProviderUsageSchema.parse({
     providerId: account.providerId,
     displayName: account.displayName,
@@ -314,10 +252,7 @@ function unavailable(
   });
 }
 
-async function fetchAccountUsage(
-  account: ClaudeAccount,
-  deps: ClaudeAccountDeps,
-): Promise<ProviderUsage> {
+async function fetchAccountUsage(account: ClaudeAccount, deps: ClaudeAccountDeps): Promise<ProviderUsage> {
   const credentials = await readCredentials(account.configDir, deps);
   if (!credentials) {
     return unavailable(account);
@@ -337,10 +272,7 @@ async function fetchAccountUsage(
     return unavailable(account, `Claude usage API returned ${response.status}`);
   }
   const body = (await response.json()) as unknown;
-  const extraUsage =
-    isRecord(body) && isRecord(body.extra_usage)
-      ? body.extra_usage.is_enabled
-      : undefined;
+  const extraUsage = isRecord(body) && isRecord(body.extra_usage) ? body.extra_usage.is_enabled : undefined;
   return ProviderUsageSchema.parse({
     providerId: account.providerId,
     displayName: account.displayName,
@@ -401,10 +333,7 @@ export async function listClaudeAccountUsage(
         return cached.usage;
       }
       const usage = fetchAccountUsage(account, deps).catch((error: unknown) =>
-        unavailable(
-          account,
-          error instanceof Error ? error.message : String(error),
-        ),
+        unavailable(account, error instanceof Error ? error.message : String(error)),
       );
       const entry: CacheEntry = { key, fetchedAtMs: nowMs, usage, nextResetMs: Number.POSITIVE_INFINITY };
       void usage.then((resolved) => {
@@ -417,21 +346,12 @@ export async function listClaudeAccountUsage(
 }
 
 /** Each extra account goes right after the daemon's own Claude card, or last if there is none. */
-export function withClaudeAccounts(
-  providers: ProviderUsage[],
-  extra: ProviderUsage[],
-): ProviderUsage[] {
+export function withClaudeAccounts(providers: ProviderUsage[], extra: ProviderUsage[]): ProviderUsage[] {
   const known = new Set(providers.map((provider) => provider.providerId));
   const fresh = extra.filter((provider) => !known.has(provider.providerId));
-  const claudeIndex = providers.findIndex(
-    (provider) => provider.providerId === "claude",
-  );
+  const claudeIndex = providers.findIndex((provider) => provider.providerId === "claude");
   if (claudeIndex === -1) {
     return [...providers, ...fresh];
   }
-  return [
-    ...providers.slice(0, claudeIndex + 1),
-    ...fresh,
-    ...providers.slice(claudeIndex + 1),
-  ];
+  return [...providers.slice(0, claudeIndex + 1), ...fresh, ...providers.slice(claudeIndex + 1)];
 }

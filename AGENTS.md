@@ -34,7 +34,7 @@ Paseo and confirm it there.
 
 - Every plugin `tsconfig.json` extends `tsconfig.base.json`. Do not copy compiler options into a plugin.
 - Prettier is configured once at the root: `printWidth` 110, single quotes under `tools/`.
-  `plugins/paseo-usage-sidebar` is a fork and is excluded to keep upstream merges clean.
+
 - Conventional Commits with a lowercase subject, enforced by `.githooks/commit-msg`.
 - Package names are `paseo-<name>`. Package metadata (`license`, `repository.directory`, `engines`) is
   uniform; keep it that way when adding a package.

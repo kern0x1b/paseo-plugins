@@ -83,7 +83,10 @@ describe("a reorder while one provider is missing", () => {
   }
 
   it("still shows the missing provider's pin once it reports again", () => {
-    const saved: Selection = { keys: ["claude:five_hour", "codex:weekly", "claude:weekly"], configured: true };
+    const saved: Selection = {
+      keys: ["claude:five_hour", "codex:weekly", "claude:weekly"],
+      configured: true,
+    };
 
     const degraded = snapshot([provider("claude", ["five_hour", "weekly"]), provider("codex", [])]);
     const onScreen = pinnedRows(degraded, saved, label, messages).map((row) => row.key);

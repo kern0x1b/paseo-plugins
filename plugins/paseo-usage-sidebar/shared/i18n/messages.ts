@@ -80,7 +80,8 @@ const en: Messages = {
   errorTitle: "Unable to load usage",
   retry: "Try again",
   linkLostTitle: "Reload the plugin",
-  linkLostBody: "The session with the Paseo daemon ended. Reload the plugin to reconnect \u2014 the app itself is up to date.",
+  linkLostBody:
+    "The session with the Paseo daemon ended. Reload the plugin to reconnect \u2014 the app itself is up to date.",
   stale: "Not updating",
   unavailable: "Unavailable",
   error: "Error",
@@ -178,7 +179,8 @@ const ja: Messages = {
   errorTitle: "使用量を読み込めません",
   retry: "再試行",
   linkLostTitle: "プラグインを再読み込みしてください",
-  linkLostBody: "Paseo デーモンとの接続が切断されました。プラグインを再読み込みすると復旧します。アプリ本体の更新は不要です。",
+  linkLostBody:
+    "Paseo デーモンとの接続が切断されました。プラグインを再読み込みすると復旧します。アプリ本体の更新は不要です。",
   stale: "更新停止中",
   unavailable: "利用不可",
   error: "エラー",
@@ -226,7 +228,8 @@ const ko: Messages = {
   errorTitle: "사용량을 불러올 수 없음",
   retry: "다시 시도",
   linkLostTitle: "플러그인을 다시 로드하세요",
-  linkLostBody: "Paseo 데몬과의 연결이 끊어졌습니다. 플러그인을 다시 로드하면 복구됩니다. 앱 자체는 업데이트할 필요가 없습니다.",
+  linkLostBody:
+    "Paseo 데몬과의 연결이 끊어졌습니다. 플러그인을 다시 로드하면 복구됩니다. 앱 자체는 업데이트할 필요가 없습니다.",
   stale: "업데이트 중지됨",
   unavailable: "사용 불가",
   error: "오류",
@@ -274,7 +277,8 @@ const es: Messages = {
   errorTitle: "No se pudo cargar el uso",
   retry: "Reintentar",
   linkLostTitle: "Vuelve a cargar el complemento",
-  linkLostBody: "La sesión con el daemon de Paseo terminó. Vuelve a cargar el complemento para reconectar: la aplicación ya está actualizada.",
+  linkLostBody:
+    "La sesión con el daemon de Paseo terminó. Vuelve a cargar el complemento para reconectar: la aplicación ya está actualizada.",
   stale: "Sin actualizar",
   unavailable: "No disponible",
   error: "Error",
@@ -322,7 +326,8 @@ const fr: Messages = {
   errorTitle: "Impossible de charger l'utilisation",
   retry: "Réessayer",
   linkLostTitle: "Rechargez l'extension",
-  linkLostBody: "La session avec le démon Paseo a pris fin. Rechargez l'extension pour vous reconnecter : l'application elle-même est à jour.",
+  linkLostBody:
+    "La session avec le démon Paseo a pris fin. Rechargez l'extension pour vous reconnecter : l'application elle-même est à jour.",
   stale: "Plus de mise à jour",
   unavailable: "Indisponible",
   error: "Erreur",
@@ -356,7 +361,8 @@ const fr: Messages = {
   moveUp: "Monter",
   moveDown: "Descendre",
   reorder: "Glisser pour réordonner",
-  pinSaveFailed: "Impossible d'enregistrer la disposition de la barre latérale. La modification a été annulée.",
+  pinSaveFailed:
+    "Impossible d'enregistrer la disposition de la barre latérale. La modification a été annulée.",
   collapse: "Réduire",
   expand: "Développer",
 };
@@ -370,7 +376,8 @@ const ptBR: Messages = {
   errorTitle: "Não foi possível carregar o uso",
   retry: "Tentar novamente",
   linkLostTitle: "Recarregue o plugin",
-  linkLostBody: "A sessão com o daemon do Paseo terminou. Recarregue o plugin para reconectar: o aplicativo já está atualizado.",
+  linkLostBody:
+    "A sessão com o daemon do Paseo terminou. Recarregue o plugin para reconectar: o aplicativo já está atualizado.",
   stale: "Sem atualizar",
   unavailable: "Indisponível",
   error: "Erro",
@@ -418,7 +425,8 @@ const ru: Messages = {
   errorTitle: "Не удалось загрузить данные",
   retry: "Повторить",
   linkLostTitle: "Перезагрузите плагин",
-  linkLostBody: "Сессия с демоном Paseo завершена. Перезагрузите плагин, чтобы восстановить связь: само приложение обновлять не нужно.",
+  linkLostBody:
+    "Сессия с демоном Paseo завершена. Перезагрузите плагин, чтобы восстановить связь: само приложение обновлять не нужно.",
   stale: "Не обновляется",
   unavailable: "Недоступно",
   error: "Ошибка",

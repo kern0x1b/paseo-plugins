@@ -2,11 +2,7 @@ import { execFile } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import {
-  ProviderUsageSchema,
-  type ProviderUsage,
-  type UsageWindow,
-} from "../../shared/usage/contract";
+import { ProviderUsageSchema, type ProviderUsage, type UsageWindow } from "../../shared/usage/contract";
 import { isRecord, toneFor } from "./claude-accounts";
 
 /**
@@ -31,8 +27,7 @@ export interface AntigravityDeps {
   now: () => number;
 }
 
-const QUOTA_URL =
-  "https://daily-cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary";
+const QUOTA_URL = "https://daily-cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary";
 const USER_AGENT = "paseo-usage-sidebar antigravity";
 const KEYCHAIN_SERVICE = "gemini";
 const KEYCHAIN_ACCOUNT = "antigravity";
@@ -49,14 +44,9 @@ function paseoConfigPath(): string {
 
 function runSecurity(args: string[]): Promise<string | null> {
   return new Promise((done) => {
-    execFile(
-      "security",
-      args,
-      { timeout: KEYCHAIN_TIMEOUT_MS },
-      (error, stdout) => {
-        done(error ? null : stdout.trim() || null);
-      },
-    );
+    execFile("security", args, { timeout: KEYCHAIN_TIMEOUT_MS }, (error, stdout) => {
+      done(error ? null : stdout.trim() || null);
+    });
   });
 }
 
@@ -79,9 +69,7 @@ export function antigravityPluginEnabled(configPath: string): boolean {
     return false;
   }
   const plugins = isRecord(config) ? config.plugins : undefined;
-  const plugin = isRecord(plugins)
-    ? plugins[ANTIGRAVITY_PROVIDER_ID]
-    : undefined;
+  const plugin = isRecord(plugins) ? plugins[ANTIGRAVITY_PROVIDER_ID] : undefined;
   return isRecord(plugin) && plugin.enabled !== false;
 }
 
@@ -149,21 +137,17 @@ function toWindow(bucket: unknown, groupName: string): UsageWindow | null {
   };
 }
 
-export function windowsFromQuotaSummary(
-  response: Record<string, unknown>,
-): UsageWindow[] {
+export function windowsFromQuotaSummary(response: Record<string, unknown>): UsageWindow[] {
   const windows: UsageWindow[] = [];
   for (const group of Array.isArray(response.groups) ? response.groups : []) {
     if (!isRecord(group) || !Array.isArray(group.buckets)) {
       continue;
     }
-    const groupName =
-      typeof group.displayName === "string" ? group.displayName : "";
+    const groupName = typeof group.displayName === "string" ? group.displayName : "";
     // The 5-hour bucket first in each group, as the Claude cards order them.
     const ordered = [...group.buckets].sort(
       (left, right) =>
-        Number(isRecord(right) && right.window === "5h") -
-        Number(isRecord(left) && left.window === "5h"),
+        Number(isRecord(right) && right.window === "5h") - Number(isRecord(left) && left.window === "5h"),
     );
     for (const bucket of ordered) {
       const window = toWindow(bucket, groupName);
@@ -187,14 +171,7 @@ function unavailable(error: string | null = null): ProviderUsage {
 
 async function fetchUsage(deps: AntigravityDeps): Promise<ProviderUsage> {
   const token = accessTokenFrom(
-    await deps.runSecurity([
-      "find-generic-password",
-      "-a",
-      KEYCHAIN_ACCOUNT,
-      "-w",
-      "-s",
-      KEYCHAIN_SERVICE,
-    ]),
+    await deps.runSecurity(["find-generic-password", "-a", KEYCHAIN_ACCOUNT, "-w", "-s", KEYCHAIN_SERVICE]),
   );
   if (!token) {
     return unavailable();
@@ -233,9 +210,7 @@ let cached: {
 
 function earliestReset(usage: ProviderUsage): number {
   const resets = usage.windows
-    .map((window) =>
-      window.resetsAt ? new Date(window.resetsAt).getTime() : Number.NaN,
-    )
+    .map((window) => (window.resetsAt ? new Date(window.resetsAt).getTime() : Number.NaN))
     .filter(Number.isFinite);
   return resets.length > 0 ? Math.min(...resets) : Number.POSITIVE_INFINITY;
 }
@@ -245,21 +220,12 @@ function earliestReset(usage: ProviderUsage): number {
  * Mac (the token lives in the Keychain). Never throws: a failure becomes an `error`
  * card instead of taking the daemon's providers down with it.
  */
-export async function listAntigravityUsage(
-  deps: AntigravityDeps = defaultDeps(),
-): Promise<ProviderUsage[]> {
-  if (
-    deps.platform !== "darwin" ||
-    !antigravityPluginEnabled(deps.configPath)
-  ) {
+export async function listAntigravityUsage(deps: AntigravityDeps = defaultDeps()): Promise<ProviderUsage[]> {
+  if (deps.platform !== "darwin" || !antigravityPluginEnabled(deps.configPath)) {
     return [];
   }
   const nowMs = deps.now();
-  if (
-    cached &&
-    nowMs - cached.fetchedAtMs < CACHE_TTL_MS &&
-    nowMs < cached.nextResetMs
-  ) {
+  if (cached && nowMs - cached.fetchedAtMs < CACHE_TTL_MS && nowMs < cached.nextResetMs) {
     return [await cached.usage];
   }
   const usage = fetchUsage(deps).catch((error: unknown) =>

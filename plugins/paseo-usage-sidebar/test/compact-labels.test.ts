@@ -40,13 +40,25 @@ describe("a window past its reset", () => {
   const future = new Date(Date.now() + 60_000).toISOString();
 
   it("reads as empty and calm even while the cached number is still 100%", () => {
-    const stale = { id: "five_hour", label: "Session", usedPct: 100, resetsAt: past, tone: "danger" as const };
+    const stale = {
+      id: "five_hour",
+      label: "Session",
+      usedPct: 100,
+      resetsAt: past,
+      tone: "danger" as const,
+    };
     assert.equal(windowUsedPct(stale), 0);
     assert.equal(windowTone(stale), "ok");
   });
 
   it("keeps its number until then", () => {
-    const live = { id: "five_hour", label: "Session", usedPct: 100, resetsAt: future, tone: "danger" as const };
+    const live = {
+      id: "five_hour",
+      label: "Session",
+      usedPct: 100,
+      resetsAt: future,
+      tone: "danger" as const,
+    };
     assert.equal(windowUsedPct(live), 100);
     assert.equal(windowTone(live), "danger");
   });

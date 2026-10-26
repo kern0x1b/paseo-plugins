@@ -16,11 +16,23 @@ beforeEach(() => {
 
 describe("writeSelectionState", () => {
   it("defaults to one column", () => {
-    assert.deepEqual(readSelectionState(), { keys: [], configured: false, columns: 1, composerPill: true, collapsedProviders: [] });
+    assert.deepEqual(readSelectionState(), {
+      keys: [],
+      configured: false,
+      columns: 1,
+      composerPill: true,
+      collapsedProviders: [],
+    });
   });
 
   it("saves columns alone without marking the pins as configured", () => {
-    assert.deepEqual(writeSelectionState({ columns: 2 }), { keys: [], configured: false, columns: 2, composerPill: true, collapsedProviders: [] });
+    assert.deepEqual(writeSelectionState({ columns: 2 }), {
+      keys: [],
+      configured: false,
+      columns: 2,
+      composerPill: true,
+      collapsedProviders: [],
+    });
   });
 
   it("keeps the saved columns when only the pins change, and the pins when only columns change", () => {

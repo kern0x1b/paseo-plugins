@@ -49,7 +49,11 @@ export function windowLabel(window: UsageWindow, messages: Messages): string {
   if (window.id === "weekly_gemini") {
     return messages.windowWeeklyGemini;
   }
-  if (window.id === "five_hour_3p" || window.id === "five_hour_other" || window.id === "five_hour_other_models") {
+  if (
+    window.id === "five_hour_3p" ||
+    window.id === "five_hour_other" ||
+    window.id === "five_hour_other_models"
+  ) {
     return messages.windowFiveHourOther;
   }
   if (window.id === "weekly_3p" || window.id === "weekly_other" || window.id === "weekly_other_models") {
