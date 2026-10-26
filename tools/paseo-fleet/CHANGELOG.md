@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Moved into the [paseo-plugins](https://github.com/kern0x1b/paseo-plugins) monorepo. Install with `paseo plugin add git:kern0x1b/paseo-plugins:tools/paseo-fleet`.
+
 ### Added
 
 - `fleet sweep`: collects `snapshot` output from every adapter, merges items by `urn`, and keeps a cursor (`lastSweepAt`) with a 24-hour minimum lookback.
@@ -18,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `start-fleet-coordinator` sweeps, verifies and plans waiting work before listening for events.
 - Coordinator Authority Rules: outbound writes (messages, comments, pushes, merge requests, merges) require explicit user approval of the draft.
 
-## [1.0.0] - 2026-10-02
+## 1.0.0 - 2026-10-02
 
 ### Added
 
@@ -30,3 +34,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Open **Paseo Fleet Protocol (v1)** specification, JSON Schemas, author guide, and reference event payloads.
 - Standalone `fleet` CLI for managing coordinator bindings, channel registries, and synthetic health checks.
 - Automated test suite covering CLI, channel manifest management, and protocol envelope validation.
+
+[Unreleased]: https://github.com/kern0x1b/paseo-plugins/commits/main/tools/paseo-fleet

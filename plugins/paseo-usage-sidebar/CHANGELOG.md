@@ -1,12 +1,17 @@
 # Changelog
 
-All notable changes to this fork are documented in this file. Features inherited unchanged from
-[upstream](https://github.com/RUIIIOVO/paseo-usage-sidebar) are not repeated here.
+All notable changes to this plugin are documented in this file. It started as a fork of
+[RUIIIOVO/paseo-usage-sidebar](https://github.com/RUIIIOVO/paseo-usage-sidebar) and is now maintained independently;
+features inherited unchanged from upstream are not repeated here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+### Changed
+
+- Moved into the [paseo-plugins](https://github.com/kern0x1b/paseo-plugins) monorepo. Install with `paseo plugin add git:kern0x1b/paseo-plugins:plugins/paseo-usage-sidebar`.
 
 ### Added
 
@@ -46,5 +51,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Account config paths and Keychain identifiers are treated as sensitive and kept out of the
   repository, including tests and fixtures
 
-[Unreleased]: https://github.com/kern0x1b/paseo-usage-sidebar/compare/v1.1.1...HEAD
-[1.1.1]: https://github.com/kern0x1b/paseo-usage-sidebar/releases/tag/v1.1.1
+[Unreleased]: https://github.com/kern0x1b/paseo-plugins/compare/paseo-usage-sidebar@1.1.1...HEAD
+[1.1.1]: https://github.com/kern0x1b/paseo-plugins/releases/tag/paseo-usage-sidebar@1.1.1

@@ -7,11 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Moved into the [paseo-plugins](https://github.com/kern0x1b/paseo-plugins) monorepo. Install with `paseo plugin add git:kern0x1b/paseo-plugins:tools/paseo-slack`.
+
 ### Added
 
 - `slack snapshot --since <iso>`: direct messages and mentions you have not replied to, grouped per conversation or thread, as one `paseo-fleet/v1` document for `fleet sweep`.
 
-## [1.1.0] - 2026-10-02
+## 1.1.0 - 2026-10-02
 
 ### Added
 
@@ -19,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Multi-workspace disambiguation with `instance` (`teamId`), `scope` (`channelId`), and fully qualified `urn:slack:<team>:<channel>:<ts>`.
 - Deterministic `reply_action` mapping directly to `slack_send_message` with channel and thread timestamps.
 
-## [1.0.0] - 2026-10-01
+## 1.0.0 - 2026-10-01
 
 ### Added
 
@@ -29,3 +33,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Standard stdio Model Context Protocol (MCP) server (`slack mcp`) for AI agents in Paseo, Claude Code, and Antigravity.
 - Zero runtime external dependencies: pure Node.js 20+ ESM using native `fetch` and `WebSocket`.
 - Comprehensive documentation and AI agent skill (`skills/slack-cli/`).
+
+[Unreleased]: https://github.com/kern0x1b/paseo-plugins/commits/main/tools/paseo-slack

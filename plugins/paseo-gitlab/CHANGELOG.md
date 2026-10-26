@@ -7,11 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Moved into the [paseo-plugins](https://github.com/kern0x1b/paseo-plugins) monorepo. Install with `paseo plugin add git:kern0x1b/paseo-plugins:plugins/paseo-gitlab`.
+
 ### Added
 
 - `gitlab snapshot`: pending to-dos, open merge requests you author, review or are assigned to (with pipeline, merge status and approvals), and assigned issues as one `paseo-fleet/v1` document for `fleet sweep`.
 
-## [1.1.0] - 2026-10-02
+## 1.1.0 - 2026-10-02
 
 ### Added
 
@@ -19,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Multi-instance disambiguation with `instance` (`host`), `scope` (`projectPath`), and fully qualified `urn:gitlab:<host>:<project>:<type>:<id>`.
 - Deterministic `reply_action` mapping directly to `gitlab_create_mr_note` or `gitlab_create_issue_note` with project and item coordinates.
 
-## [1.0.0] - 2026-09-25
+## 1.0.0 - 2026-09-25
 
 ### Added
 
@@ -32,7 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tabs in main area for Issues and MRs: open items in persistent workspace tabs
 - Label filter on Issues, MRs, and Review tabs with persistent choices per tab
 
-## [0.1.0] - 2026-09-23
+## 0.1.0 - 2026-09-23
 
 ### Added
 
@@ -67,6 +71,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   never returned to the client; https-only hosts; server-side image proxy limited to the connected
   host with magic-byte sniffing and no inline SVG; GitLab HTML sanitised against an allowlist
 
-[Unreleased]: https://github.com/kern0x1b/paseo-gitlab/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/kern0x1b/paseo-gitlab/compare/v0.1.0...v1.0.0
-[0.1.0]: https://github.com/kern0x1b/paseo-gitlab/releases/tag/v0.1.0
+[Unreleased]: https://github.com/kern0x1b/paseo-plugins/commits/main/plugins/paseo-gitlab
