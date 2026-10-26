@@ -1,0 +1,1 @@
+A dark theme modeled on a green phosphor CRT terminal: bright green text on a near-black background, with dimmer green surfaces and borders. The palette comes from the "Retro" Terminal.app profile. Select it under Settings, Appearance.
