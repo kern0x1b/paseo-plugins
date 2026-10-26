@@ -1,7 +1,3 @@
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
+import { useIsolatedHome } from 'paseo-fleet-kit/testing';
 
-export const isolatedHome = fs.mkdtempSync(path.join(os.tmpdir(), 'paseo-fleet-test-home-'));
-process.env.HOME = isolatedHome;
-process.env.USERPROFILE = isolatedHome;
+export const isolatedHome = useIsolatedHome();

@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The protocol helpers (`createEventEnvelope`, `validateEventEnvelope`, `validateSnapshotDocument`) now live in `paseo-fleet-kit` and are re-exported from here.
 - `start-fleet-coordinator` sweeps, verifies and plans waiting work before listening for events.
 - Coordinator Authority Rules: outbound writes (messages, comments, pushes, merge requests, merges) require explicit user approval of the draft.
 - `fleet activate`, `stop`, `status` and `coordinator set` drive every adapter in `config.adapters` instead of hardcoded Slack and GitLab; extra daemon flags go in `adapterDaemonArgs`.

@@ -20,7 +20,7 @@ import {
   stopDaemon,
   unbindCoordinator,
 } from '../src/adapters.js';
-import { createEventEnvelope, validateEventEnvelope, validateSnapshotDocument } from '../src/protocol.js';
+import { createEventEnvelope, validateEventEnvelope, validateSnapshotDocument } from 'paseo-fleet-kit';
 import { parseSince, resolveSweepSince, runSweep } from '../src/sweep.js';
 
 const args = process.argv.slice(2);

@@ -23,6 +23,9 @@
   "scripts": {
     "test": "node --test test/"
   },
+  "dependencies": {
+    "paseo-fleet-kit": "*"
+  },
   "main": "src/index.js",
   "keywords": [
     "paseo",

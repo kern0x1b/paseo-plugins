@@ -26,6 +26,9 @@
     "mcp": "node ./bin/slack.js mcp",
     "test": "node --test test/"
   },
+  "dependencies": {
+    "paseo-fleet-kit": "*"
+  },
   "main": "src/index.js",
   "keywords": [
     "slack",

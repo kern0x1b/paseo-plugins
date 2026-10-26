@@ -16,7 +16,7 @@ export {
   createEventEnvelope,
   validateEventEnvelope,
   validateSnapshotDocument,
-} from './protocol.js';
+} from 'paseo-fleet-kit';
 
 export {
   DEFAULT_DAEMON_ARGS,

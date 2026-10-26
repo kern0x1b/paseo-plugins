@@ -1,0 +1,27 @@
+{
+  "name": "paseo-fleet-kit",
+  "version": "0.1.0",
+  "description": "Shared building blocks for Paseo fleet adapters: protocol envelopes, subscriptions, dispatching and daemon state",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kern0x1b/paseo-plugins.git",
+    "directory": "libs/paseo-fleet-kit"
+  },
+  "homepage": "https://github.com/kern0x1b/paseo-plugins/tree/main/libs/paseo-fleet-kit#readme",
+  "bugs": {
+    "url": "https://github.com/kern0x1b/paseo-plugins/issues"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "exports": {
+    ".": "./src/index.js",
+    "./testing": "./src/testing.js"
+  },
+  "scripts": {
+    "test": "node --test test/"
+  }
+}

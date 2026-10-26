@@ -1,13 +1,11 @@
-import fs from "node:fs";
-import path from "node:path";
-import os from "node:os";
+import { createDaemonStateStore } from "paseo-fleet-kit";
 import { GitLabClient } from "./gitlab-client.js";
 import { GitLabEventDispatcher } from "./dispatcher.js";
 import { SubscriptionRegistry } from "./subscriptions.js";
 import { loadConfig } from "./config.js";
 import { HealthMonitor } from "./health.js";
 
-const STATE_FILE = path.join(os.homedir(), ".config", "gitlab-router", "daemon-state.json");
+const daemonState = createDaemonStateStore({ routerName: "gitlab-router", processMarker: "gitlab" });
 
 function log(...args) {
   console.log(new Date().toISOString(), ...args);
@@ -80,36 +78,20 @@ export class GitLabDaemon {
   }
 
   saveState() {
-    try {
-      const dir = path.dirname(STATE_FILE);
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-      fs.writeFileSync(
-        STATE_FILE,
-        JSON.stringify(
-          {
-            pid: process.pid,
-            running: this.running,
-            startedAt: this.startedAt,
-            lastPollAt: this.lastPollAt,
-            eventsProcessed: this.eventsProcessed,
-            baseIntervalMs: this.baseIntervalMs,
-            workHoursOnly: this.workHoursOnly,
-            updatedAt: new Date().toISOString(),
-          },
-          null,
-          2,
-        ),
-        "utf8",
-      );
-    } catch {}
+    daemonState.saveState({
+      pid: process.pid,
+      running: this.running,
+      startedAt: this.startedAt,
+      lastPollAt: this.lastPollAt,
+      eventsProcessed: this.eventsProcessed,
+      baseIntervalMs: this.baseIntervalMs,
+      workHoursOnly: this.workHoursOnly,
+      updatedAt: new Date().toISOString(),
+    });
   }
 
   clearState() {
-    try {
-      if (fs.existsSync(STATE_FILE)) {
-        fs.unlinkSync(STATE_FILE);
-      }
-    } catch {}
+    daemonState.clearState();
   }
 
   getStatus() {

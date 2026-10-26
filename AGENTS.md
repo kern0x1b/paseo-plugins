@@ -9,6 +9,7 @@ Guidance for automated agents and contributors. It applies to every package; a p
 | ---------- | ----------------------------------------------------------------------------------------- |
 | `plugins/` | Paseo plugins. Each has a `paseo-plugin.json` and installs with `paseo plugin add`.       |
 | `tools/`   | Standalone Node tools and skills that are not Paseo plugins.                              |
+| `libs/`    | Shared libraries used by several packages, such as `paseo-fleet-kit`.                     |
 | Root files | Shared configuration: `tsconfig.base.json`, `.prettierrc.json`, `.githooks/`, `.github/`. |
 
 Packages are npm workspaces with one lockfile. Shared dev dependencies (TypeScript, Prettier, the
@@ -43,7 +44,7 @@ Paseo and confirm it there.
 
 ## Adding a package
 
-1. Create `plugins/paseo-<name>` or `tools/paseo-<name>` with a `package.json` copied from a sibling.
+1. Create `plugins/paseo-<name>`, `tools/paseo-<name>` or `libs/paseo-<name>` with a `package.json` copied from a sibling.
 2. For a plugin, add `paseo-plugin.json`, `OVERVIEW.md`, and a `tsconfig.json` that extends the base.
 3. Add the package to the table in the root `README.md` and to the bug report template.
 4. Run `npm install` and `npm run check`.

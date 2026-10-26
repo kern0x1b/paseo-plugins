@@ -39,6 +39,9 @@
     "daemon": "node ./bin/gitlab.js daemon",
     "mcp": "node ./bin/gitlab.js mcp"
   },
+  "dependencies": {
+    "paseo-fleet-kit": "*"
+  },
   "main": "src/index.js",
   "keywords": [
     "gitlab",

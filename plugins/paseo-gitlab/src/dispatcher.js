@@ -1,15 +1,19 @@
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
+import { BaseEventDispatcher } from "paseo-fleet-kit";
 import { SubscriptionRegistry } from "./subscriptions.js";
 import { loadConfig } from "./config.js";
 
-const execFileAsync = promisify(execFile);
-
-export class GitLabEventDispatcher {
+export class GitLabEventDispatcher extends BaseEventDispatcher {
   constructor({ registry = new SubscriptionRegistry(), config = loadConfig(), myUsername = null } = {}) {
-    this.registry = registry;
-    this.config = config;
+    super({ registry, config });
     this.myUsername = myUsername;
+  }
+
+  buildPrompt(event) {
+    return this.buildEventPrompt(event);
+  }
+
+  buildEnvelope(event) {
+    return this.buildFleetEnvelope(event);
   }
 
   setMyUsername(username) {
@@ -102,55 +106,8 @@ export class GitLabEventDispatcher {
     };
   }
 
-  async sendToPaseo(agentId, prompt) {
-    const paseoBin = this.config.paseoBin || "paseo";
-    try {
-      const { stdout, stderr } = await execFileAsync(paseoBin, ["send", agentId, prompt, "--no-wait"]);
-      return { success: true, stdout: stdout.trim(), stderr: stderr.trim() };
-    } catch (err) {
-      return { success: false, error: err.message };
-    }
-  }
-
-  async dispatch(event) {
-    const specificAgent = this.registry.findMatchingAgent(event);
-
-    if (specificAgent) {
-      const prompt = this.buildEventPrompt(event);
-      const result = await this.sendToPaseo(specificAgent, prompt);
-      return {
-        routed: true,
-        type: "specific_agent",
-        targetAgent: specificAgent,
-        delivery: result,
-      };
-    }
-
-    const coordinatorId = this.registry.getCoordinator() || this.config.coordinatorAgentId;
-
-    if (coordinatorId) {
-      const envelope = this.buildFleetEnvelope(event);
-      const envelopeJson = JSON.stringify(envelope, null, 2);
-      const result = await this.sendToPaseo(coordinatorId, envelopeJson);
-      return {
-        routed: true,
-        type: "coordinator",
-        targetAgent: coordinatorId,
-        delivery: result,
-        envelope,
-      };
-    }
-
-    const fallbackPrompt = this.buildEventPrompt(event);
-    return {
-      routed: false,
-      reason: "No matching subscription and no coordinator configured",
-      eventPrompt: fallbackPrompt,
-    };
-  }
-
   async dispatchToCoordinator(event) {
-    const coordinatorId = this.registry.getCoordinator() || this.config.coordinatorAgentId;
+    const coordinatorId = this.resolveCoordinatorId();
     const envelope = this.buildFleetEnvelope(event);
     const envelopeJson = JSON.stringify(envelope, null, 2);
 

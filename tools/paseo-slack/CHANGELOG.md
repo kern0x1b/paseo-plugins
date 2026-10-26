@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `src/` builds on `paseo-fleet-kit` for subscriptions, dispatching and daemon state files; behaviour and stored files are unchanged.
 - Moved into the [paseo-plugins](https://github.com/kern0x1b/paseo-plugins) monorepo as `tools/paseo-slack`. It is a command-line tool, not a Paseo plugin.
 
 ### Added

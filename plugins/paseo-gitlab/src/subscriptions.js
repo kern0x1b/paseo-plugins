@@ -1,52 +1,9 @@
-import fs from "node:fs";
 import path from "node:path";
-import os from "node:os";
-import crypto from "node:crypto";
+import { BaseSubscriptionRegistry, defaultRouterDirectory } from "paseo-fleet-kit";
 
-const SUBS_DIR = path.join(os.homedir(), ".config", "gitlab-router");
-const SUBS_FILE = path.join(SUBS_DIR, "subscriptions.json");
-
-function ensureDir() {
-  if (!fs.existsSync(SUBS_DIR)) {
-    fs.mkdirSync(SUBS_DIR, { recursive: true });
-  }
-}
-
-export class SubscriptionRegistry {
-  constructor(filePath = SUBS_FILE) {
-    this.filePath = filePath;
-  }
-
-  load() {
-    ensureDir();
-    if (!fs.existsSync(this.filePath)) {
-      return { coordinatorAgentId: null, subscriptions: [] };
-    }
-    try {
-      return JSON.parse(fs.readFileSync(this.filePath, "utf8"));
-    } catch {
-      return { coordinatorAgentId: null, subscriptions: [] };
-    }
-  }
-
-  save(data) {
-    ensureDir();
-    fs.writeFileSync(this.filePath, JSON.stringify(data, null, 2), "utf8");
-  }
-
-  getCoordinator() {
-    return this.load().coordinatorAgentId;
-  }
-
-  setCoordinator(agentId) {
-    const data = this.load();
-    data.coordinatorAgentId = agentId;
-    this.save(data);
-    return data;
-  }
-
-  list() {
-    return this.load().subscriptions || [];
+export class SubscriptionRegistry extends BaseSubscriptionRegistry {
+  constructor(filePath = path.join(defaultRouterDirectory("gitlab-router"), "subscriptions.json")) {
+    super({ filePath, idPrefix: "sub_gl" });
   }
 
   add({
@@ -62,10 +19,8 @@ export class SubscriptionRegistry {
       throw new Error("agentId is required for subscription");
     }
 
-    const data = this.load();
-    const id = `sub_gl_${crypto.randomBytes(4).toString("hex")}`;
     const sub = {
-      id,
+      id: this.newSubscriptionId(),
       agentId,
       projectId: projectId !== null && projectId !== undefined ? Number(projectId) : null,
       mrIid: mrIid ? Number(mrIid) : null,
@@ -76,55 +31,34 @@ export class SubscriptionRegistry {
       createdAt: new Date().toISOString(),
     };
 
-    data.subscriptions = (data.subscriptions || []).filter(
-      (s) =>
-        !(
-          s.agentId === agentId &&
-          s.projectId === sub.projectId &&
-          s.mrIid === sub.mrIid &&
-          s.issueIid === sub.issueIid &&
-          s.eventType === sub.eventType &&
-          s.author === sub.author &&
-          s.ref === sub.ref
-        ),
+    return this.addSubscription(
+      sub,
+      (existing, added) =>
+        existing.agentId === agentId &&
+        existing.projectId === added.projectId &&
+        existing.mrIid === added.mrIid &&
+        existing.issueIid === added.issueIid &&
+        existing.eventType === added.eventType &&
+        existing.author === added.author &&
+        existing.ref === added.ref,
     );
-
-    data.subscriptions.push(sub);
-    this.save(data);
-    return sub;
   }
 
   remove({ id, agentId, mrIid, issueIid, ref, author }) {
-    const data = this.load();
-    const beforeCount = (data.subscriptions || []).length;
-
-    data.subscriptions = (data.subscriptions || []).filter((s) => {
-      if (id && s.id === id) return false;
-      if (agentId && !id && !mrIid && !issueIid && !ref && !author && s.agentId === agentId) {
-        return false;
-      }
-      if (mrIid && s.mrIid === Number(mrIid) && (!agentId || s.agentId === agentId)) {
-        return false;
-      }
-      if (issueIid && s.issueIid === Number(issueIid) && (!agentId || s.agentId === agentId)) {
-        return false;
-      }
-      if (ref && s.ref === String(ref) && (!agentId || s.agentId === agentId)) {
-        return false;
-      }
-      if (author && s.author === String(author).replace(/^@/, "") && (!agentId || s.agentId === agentId)) {
-        return false;
-      }
-      return true;
+    const sameOwner = (s) => !agentId || s.agentId === agentId;
+    return this.removeSubscriptions((s) => {
+      if (id && s.id === id) return true;
+      if (agentId && !id && !mrIid && !issueIid && !ref && !author && s.agentId === agentId) return true;
+      if (mrIid && s.mrIid === Number(mrIid) && sameOwner(s)) return true;
+      if (issueIid && s.issueIid === Number(issueIid) && sameOwner(s)) return true;
+      if (ref && s.ref === String(ref) && sameOwner(s)) return true;
+      if (author && s.author === String(author).replace(/^@/, "") && sameOwner(s)) return true;
+      return false;
     });
-
-    this.save(data);
-    return beforeCount - data.subscriptions.length;
   }
 
   findMatchingAgent(event) {
-    const data = this.load();
-    const subs = data.subscriptions || [];
+    const subs = this.list();
 
     let bestMatch = null;
     let highestScore = -1;

@@ -8,6 +8,11 @@ fleet Coordinator. This guide is the complete contract. Two reference adapters i
 
 Read them next to this guide. The file names below are the same in both.
 
+Start from [`libs/paseo-fleet-kit`](../../../libs/paseo-fleet-kit): it already implements the envelope,
+the subscription file, the routing flow and the daemon state file. An adapter adds only what is specific
+to its platform: how events arrive, the filter, the subscription match, the envelope fields and the
+reply tool.
+
 The fleet never imports an adapter. It runs adapters as commands named in `~/.config/paseo/fleet/config.json`
 under `adapters` (default `["slack", "gitlab"]`), so a new adapter needs no change to `paseo-fleet`:
 install the command on `PATH`, add its name to `adapters`, and `fleet activate`, `fleet stop`,
@@ -87,7 +92,8 @@ A subscription is a small record in the adapter's own config directory:
 
 Match on the platform's own coordinates (channel, thread, sender, project, merge request). A field left
 empty matches anything. Adding an identical subscription replaces the old one. `list`, `add` and
-`remove` are the whole API; copy `SubscriptionRegistry` from either reference adapter.
+`remove` are the whole API. Extend `BaseSubscriptionRegistry` and write `add`, `remove` and
+`findMatchingAgent`.
 
 ## 5. Daemon rules
 
@@ -137,7 +143,7 @@ extra flags, add them under `adapterDaemonArgs` (for example `{ "teams": ["--ten
 | Snapshot          | unanswered DMs and mentions  | to-dos, MRs, assigned issues | chats where the last message is not yours and mentions of you |
 | Reply tool        | `slack_send_message`         | `gitlab_create_issue_note`   | `teams_send_message` with `chat_id` and `reply_to`            |
 
-A minimal adapter is `bin/teams.js` (the commands in section 1), `src/dispatcher.js` (sections 2 and 3),
+A minimal adapter (see the kit README for the dispatcher and registry) is `bin/teams.js` (the commands in section 1), `src/dispatcher.js` (sections 2 and 3),
 `src/subscriptions.js` (section 4) and `src/snapshot.js` (section 6), with its own tests that fake the
 platform at the network boundary. Tests must never write to the real home directory: set `HOME` to a temp
 directory, as `tools/paseo-fleet/test/isolated-home.mjs` does.
