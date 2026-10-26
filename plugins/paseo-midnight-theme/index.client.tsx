@@ -7,7 +7,7 @@ import type { PluginClientContext } from "@getpaseo/plugin/client";
 //
 // The theme API carries colors only, so the layout tweaks are a stylesheet keyed on Paseo's test
 // ids and accessibility labels: the composer's text area starts at one line and grows with its
-// content, the voice mode and dictation buttons and the sidebar help button are hidden, and the composer and the pills above it
+// content, and the composer and the pills above it
 // (subagents, diff stat) share one narrower, centered column, and the
 // chat has wider side margins. In the sidebar a project reads as the header of its group: its row
 // and every other row share one height and one step, its workspaces are indented beneath it;
@@ -44,10 +44,6 @@ const LAYOUT_CSS = `
   padding-top: 10px !important;
   padding-bottom: 6px !important;
   gap: 4px !important;
-}
-[data-testid="message-input-root"] [aria-label="Enable Voice mode"],
-[data-testid="message-input-root"] [aria-label="Start dictation"] {
-  display: none !important;
 }
 [data-testid="message-input-root"],
 [data-midnight-anchor~="pill-row"] {
@@ -165,7 +161,6 @@ const LAYOUT_CSS = `
   border-right-width: 0 !important;
   background-color: #151514 !important;
 }
-[data-testid="sidebar-help"],
 [data-testid="sidebar-footer-separator"] {
   display: none !important;
 }
