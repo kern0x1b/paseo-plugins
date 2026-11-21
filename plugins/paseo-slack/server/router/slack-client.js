@@ -8,7 +8,7 @@ export class SlackClient {
 
   getHeaders() {
     const headers = {
-      "Content-Type": "application/json; charset=utf-8",
+      "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
     };
 
     if (this.config.xoxpToken) {
@@ -34,7 +34,7 @@ export class SlackClient {
     const response = await fetch(url, {
       method: "POST",
       headers,
-      body: JSON.stringify(params),
+      body: toFormBody(params),
     });
 
     const data = await response.json();
@@ -179,4 +179,13 @@ export class SlackClient {
 
     return { url: data.url, headers, selfId: data.self && data.self.id };
   }
+}
+
+function toFormBody(params) {
+  const body = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null) continue;
+    body.append(key, typeof value === "object" ? JSON.stringify(value) : String(value));
+  }
+  return body;
 }
