@@ -1,3 +1,4 @@
+import path from "node:path";
 import { createDaemonStateStore } from "paseo-fleet-kit";
 import { GitLabClient } from "./gitlab-client.js";
 import { GitLabEventDispatcher } from "./dispatcher.js";
@@ -11,8 +12,10 @@ const EVENTS_PAGE_SIZE = 100;
 const MAX_EVENT_PAGES = 5;
 const MAX_DELIVERY_ATTEMPTS = 3;
 const MAX_SEEN_IDS = 2000;
+const OTHERS_BODY_CHARS = 300;
 const FINISHED_PIPELINE_STATUSES = new Set(["failed", "success", "canceled"]);
 const INIT_RETRY_MAX_MS = 5 * 60 * 1000;
+const MAX_RESUME_AGE_MS = 24 * 60 * 60 * 1000;
 
 function log(...args) {
   console.log(new Date().toISOString(), ...args);
@@ -46,6 +49,11 @@ export class GitLabDaemon {
     dryRun = false,
     health = new HealthMonitor(),
     initRetryMs = 5000,
+    scope = "mine",
+    stateFile = path.join(
+      path.dirname(daemonState.defaultStateFile),
+      scope === "others" ? "daemon-state-others.json" : "daemon-state.json",
+    ),
   } = {}) {
     this.client = client;
     this.config = config;
@@ -54,11 +62,17 @@ export class GitLabDaemon {
     this.baseIntervalMs = (config.pollIntervalSeconds || 120) * 1000;
     this.workHoursOnly = workHoursOnly;
     this.dryRun = dryRun;
+    this.scope = scope;
+    this.stateFile = stateFile;
+    const previousPollAt = daemonState.readState(stateFile)?.lastPollAt;
+    this.resumeFrom =
+      previousPollAt && Date.now() - Date.parse(previousPollAt) < MAX_RESUME_AGE_MS ? previousPollAt : null;
     this.dispatcher =
       dispatcher ||
       new GitLabEventDispatcher({
         registry: this.registry,
         config: this.config,
+        label: scope === "others" ? "GitLab, other people's events" : "GitLab",
       });
 
     if (this.dryRun) {
@@ -90,20 +104,27 @@ export class GitLabDaemon {
   }
 
   saveState() {
-    daemonState.saveState({
-      pid: process.pid,
-      running: this.running,
-      startedAt: this.startedAt,
-      lastPollAt: this.lastPollAt,
-      eventsProcessed: this.eventsProcessed,
-      baseIntervalMs: this.baseIntervalMs,
-      workHoursOnly: this.workHoursOnly,
-      updatedAt: new Date().toISOString(),
-    });
+    daemonState.saveState(
+      {
+        pid: process.pid,
+        running: this.running,
+        startedAt: this.startedAt,
+        lastPollAt: this.lastPollAt,
+        eventsProcessed: this.eventsProcessed,
+        baseIntervalMs: this.baseIntervalMs,
+        workHoursOnly: this.workHoursOnly,
+        updatedAt: new Date().toISOString(),
+      },
+      this.stateFile,
+    );
   }
 
   clearState() {
-    daemonState.clearState();
+    daemonState.clearState(this.stateFile);
+  }
+
+  happenedBeforeResume(createdAt) {
+    return !this.resumeFrom || !createdAt || createdAt <= this.resumeFrom;
   }
 
   getStatus() {
@@ -280,12 +301,12 @@ export class GitLabDaemon {
     try {
       const initialTodos = await this.client.getTodos({ perPage: 30 });
       for (const t of initialTodos) {
-        this.seenTodoIds.add(t.id);
+        if (this.happenedBeforeResume(t.created_at)) this.seenTodoIds.add(t.id);
       }
 
       const initialEvents = await this.client.getProjectEvents({ perPage: EVENTS_PAGE_SIZE });
       for (const e of initialEvents) {
-        this.seenEventIds.add(e.id);
+        if (this.happenedBeforeResume(e.created_at)) this.seenEventIds.add(e.id);
       }
 
       const initialPipelines = await this.client.getPipelines({
@@ -385,7 +406,8 @@ export class GitLabDaemon {
               (subscription.author && subscription.author === ev.author_username),
           );
 
-        if (!isWatched && !isMyMr && !isMyIssue && !mentionsMe) {
+        const isMine = isWatched || isMyMr || isMyIssue || mentionsMe;
+        if (this.scope === "others" ? isMine : !isMine) {
           continue;
         }
 
@@ -399,7 +421,10 @@ export class GitLabDaemon {
           issueIid: issueIid ? Number(issueIid) : null,
           ref: ev.push_data?.ref || null,
           title: ev.target_title || ev.push_data?.commit_title || "",
-          body,
+          body:
+            this.scope === "others" && body.length > OTHERS_BODY_CHARS
+              ? `${body.slice(0, OTHERS_BODY_CHARS)}…`
+              : body,
           raw: ev,
         };
 
@@ -523,6 +548,20 @@ export class GitLabDaemon {
     }
   }
 
+  async prepare() {
+    if (this.running) return true;
+    this.running = true;
+    this.startedAt = new Date().toISOString();
+    const initialized = await this.initWithRetry();
+    if (initialized) {
+      log(
+        `[GitLab Daemon] Event router ready for ${this.scope === "others" ? "other people's events" : "my events"}`,
+      );
+      this.saveState();
+    }
+    return initialized;
+  }
+
   async start() {
     if (this.running) return;
     this.running = true;
@@ -569,9 +608,12 @@ export class GitLabDaemon {
     }
 
     this.lastPollAt = new Date().toISOString();
-    const todosResult = await this.checkTodos();
+    const watchesMine = this.scope !== "others";
+    const todosResult = watchesMine ? await this.checkTodos() : { success: true, source: "todos" };
     const eventsResult = await this.checkEvents();
-    const pipelinesResult = await this.checkPipelines();
+    const pipelinesResult = watchesMine
+      ? await this.checkPipelines()
+      : { success: true, source: "pipelines" };
     await this.deliverQueuedEvents();
     this.saveState();
 
@@ -593,7 +635,7 @@ export class GitLabDaemon {
       clearTimeout(this.timer);
       this.timer = null;
     }
-    this.clearState();
+    this.saveState();
     log("[GitLab Daemon] Stopped.");
   }
 }

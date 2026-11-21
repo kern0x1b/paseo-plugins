@@ -5,9 +5,15 @@ import { loadConfig } from "./config.js";
 const MAX_BODY_CHARS = 4000;
 
 export class GitLabEventDispatcher extends BaseEventDispatcher {
-  constructor({ registry = new SubscriptionRegistry(), config = loadConfig(), myUsername = null } = {}) {
+  constructor({
+    registry = new SubscriptionRegistry(),
+    config = loadConfig(),
+    myUsername = null,
+    label = "GitLab",
+  } = {}) {
     super({ registry, config });
     this.myUsername = myUsername;
+    this.label = label;
   }
 
   buildPrompt(event) {
@@ -19,7 +25,7 @@ export class GitLabEventDispatcher extends BaseEventDispatcher {
   }
 
   buildBatchMessage(events) {
-    const header = `[GitLab] ${events.length} new event${events.length === 1 ? "" : "s"}`;
+    const header = `[${this.label}] ${events.length} new event${events.length === 1 ? "" : "s"}`;
     return [header, ...events.map((event, index) => this.buildEventLine(event, index + 1))].join("\n\n");
   }
 
@@ -32,7 +38,7 @@ export class GitLabEventDispatcher extends BaseEventDispatcher {
     }
     const lines = [`${number}. ${headline}`];
     if (event.url) lines.push(`   ${event.url}`);
-    if (event.body) {
+    if (event.body && event.body.trim() !== (event.title || "").trim()) {
       const body =
         event.body.length > MAX_BODY_CHARS ? `${event.body.slice(0, MAX_BODY_CHARS)}…` : event.body;
       lines.push(body.replace(/^/gm, "   "));
@@ -132,25 +138,12 @@ export class GitLabEventDispatcher extends BaseEventDispatcher {
 
   async dispatchToCoordinator(event) {
     const coordinatorId = this.resolveCoordinatorId();
-    const envelope = this.buildFleetEnvelope(event);
-    const envelopeJson = JSON.stringify(envelope, null, 2);
-
+    const message = `[${this.label}] ${event.category}: ${event.title}`;
     if (!coordinatorId) {
-      return {
-        routed: false,
-        reason: "No coordinator configured",
-        eventPrompt: envelopeJson,
-      };
+      return { routed: false, reason: "No coordinator configured", eventPrompt: message };
     }
-
-    const result = await this.sendToPaseo(coordinatorId, envelopeJson);
-    return {
-      routed: true,
-      type: "coordinator",
-      targetAgent: coordinatorId,
-      delivery: result,
-      envelope,
-    };
+    const result = await this.sendToPaseo(coordinatorId, message);
+    return { routed: true, type: "coordinator", targetAgent: coordinatorId, delivery: result };
   }
 }
 

@@ -20,17 +20,65 @@ import {
   authStatusRpc,
   type AuthStatus,
 } from "../../shared/contract";
-import { featureSettings } from "../../shared/features";
+import { cronError } from "../../shared/cron";
+import { featureSettings, type FeatureValues } from "../../shared/features";
 import { applyExplorerSetting } from "../plugin-client";
 import { STATUS_KEY } from "./queries";
 import { useStyles, type Styles } from "./styles";
 
 const DEFAULT_HOST = "https://gitlab.com";
 
+type EventSource = "myEvents" | "allEvents";
+
+const EVENT_SOURCES: ReadonlyArray<{ key: EventSource; label: string; hint: string }> = [
+  {
+    key: "myEvents",
+    label: "My events",
+    hint: "My merge requests and issues, mentions of me, my to-dos and my pipelines",
+  },
+  {
+    key: "allEvents",
+    label: "Everyone else's events",
+    hint: "All other project activity, without the events above",
+  },
+];
+
+function CronEditor({
+  value,
+  disabled,
+  onSave,
+}: {
+  value: string;
+  disabled: boolean;
+  onSave: (cron: string) => void;
+}) {
+  const [draft, setDraft] = useState(value);
+  const error = cronError(draft);
+  return (
+    <>
+      <SettingsInput
+        label="Schedule"
+        hint="Cron in the daemon machine's local time, e.g. */2 8-20 * * 1-5"
+        error={error ?? undefined}
+        initialValue={value}
+        disabled={disabled}
+        onChangeText={setDraft}
+      />
+      <SettingsAction
+        label="Apply schedule"
+        actionLabel="Save"
+        disabled={disabled || error !== null || draft.trim() === value}
+        onPress={() => onSave(draft.trim())}
+      />
+    </>
+  );
+}
+
 function FeatureSettings({ styles }: { styles: Styles }) {
   const settings = useSettings(featureSettings);
   if (settings.status !== "ready") return null;
-  const update = async (next: { explorer: boolean; eventRouter: boolean }) => {
+  const values = settings.values;
+  const update = async (next: FeatureValues) => {
     if (await settings.save(next, settings.revision)) applyExplorerSetting(next.explorer);
   };
   return (
@@ -39,18 +87,30 @@ function FeatureSettings({ styles }: { styles: Styles }) {
         <SettingsSwitch
           label="Explorer and review"
           hint="GitLab panel, merge request diff, repository, issue board, header button and attachments"
-          value={settings.values.explorer}
+          value={values.explorer}
           disabled={settings.saving}
-          onValueChange={(explorer) => update({ ...settings.values, explorer })}
-        />
-        <SettingsSwitch
-          label="Event router"
-          hint="Polls GitLab and sends new events to Paseo agents"
-          value={settings.values.eventRouter}
-          disabled={settings.saving}
-          onValueChange={(eventRouter) => update({ ...settings.values, eventRouter })}
+          onValueChange={(explorer) => update({ ...values, explorer })}
         />
       </SettingsCard>
+      {EVENT_SOURCES.map(({ key, label, hint }) => (
+        <SettingsCard key={key}>
+          <SettingsSwitch
+            label={label}
+            hint={hint}
+            value={values[key].enabled}
+            disabled={settings.saving}
+            onValueChange={(enabled) => update({ ...values, [key]: { ...values[key], enabled } })}
+          />
+          {values[key].enabled ? (
+            <CronEditor
+              key={values[key].cron}
+              value={values[key].cron}
+              disabled={settings.saving}
+              onSave={(cron) => update({ ...values, [key]: { ...values[key], cron } })}
+            />
+          ) : null}
+        </SettingsCard>
+      ))}
       {settings.saveError ? <Text style={styles.error}>{settings.saveError}</Text> : null}
     </SettingsSection>
   );
