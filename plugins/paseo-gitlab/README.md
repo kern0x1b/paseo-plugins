@@ -274,6 +274,8 @@ a malformed response fails loudly instead of reaching the UI.
 
 ## CLI, Event Router & MCP Server
 
+The explorer UI and the event router are independent. Turn either off under **Settings → Plugins → GitLab → Features**; the other keeps working.
+
 Besides the UI, the plugin runs the event router inside Paseo, and the package ships a standalone CLI (`gitlab`) and a stdio Model Context Protocol (MCP) server for AI fleets:
 
 ```

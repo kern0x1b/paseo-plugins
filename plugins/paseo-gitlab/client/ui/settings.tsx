@@ -1,4 +1,4 @@
-import type { PluginSurfaceProps } from "@getpaseo/plugin/client";
+import { useSettings, type PluginSurfaceProps } from "@getpaseo/plugin/client";
 import { ACCOUNTS_KEY, refreshAccountCaches, useRpc } from "../account";
 import { useToast } from "@getpaseo/plugin/client/react-native";
 import {
@@ -8,6 +8,7 @@ import {
   SettingsInput,
   SettingsRow,
   SettingsSection,
+  SettingsSwitch,
 } from "@getpaseo/plugin/client/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useState } from "react";
@@ -19,10 +20,41 @@ import {
   authStatusRpc,
   type AuthStatus,
 } from "../../shared/contract";
+import { featureSettings } from "../../shared/features";
+import { applyExplorerSetting } from "../plugin-client";
 import { STATUS_KEY } from "./queries";
 import { useStyles, type Styles } from "./styles";
 
 const DEFAULT_HOST = "https://gitlab.com";
+
+function FeatureSettings({ styles }: { styles: Styles }) {
+  const settings = useSettings(featureSettings);
+  if (settings.status !== "ready") return null;
+  const update = async (next: { explorer: boolean; eventRouter: boolean }) => {
+    if (await settings.save(next, settings.revision)) applyExplorerSetting(next.explorer);
+  };
+  return (
+    <SettingsSection title="Features">
+      <SettingsCard>
+        <SettingsSwitch
+          label="Explorer and review"
+          hint="GitLab panel, merge request diff, repository, issue board, header button and attachments"
+          value={settings.values.explorer}
+          disabled={settings.saving}
+          onValueChange={(explorer) => update({ ...settings.values, explorer })}
+        />
+        <SettingsSwitch
+          label="Event router"
+          hint="Polls GitLab and sends new events to Paseo agents"
+          value={settings.values.eventRouter}
+          disabled={settings.saving}
+          onValueChange={(eventRouter) => update({ ...settings.values, eventRouter })}
+        />
+      </SettingsCard>
+      {settings.saveError ? <Text style={styles.error}>{settings.saveError}</Text> : null}
+    </SettingsSection>
+  );
+}
 function tokenPageUrl(host: string): string {
   return `${host.replace(/\/+$/, "")}/-/user_settings/personal_access_tokens?name=Paseo&scopes=api`;
 }
@@ -193,6 +225,7 @@ export function GitLabSettings({ theme }: PluginSurfaceProps) {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.scroll}>
+      <FeatureSettings styles={styles} />
       <SettingsSection title="GitLab">
         {accounts.isPending ? (
           <Text style={styles.muted}>Checking the connection…</Text>

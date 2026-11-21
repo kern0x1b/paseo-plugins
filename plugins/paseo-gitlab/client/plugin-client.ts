@@ -9,6 +9,16 @@ export function setPluginClient(client: PluginClientContext | null): void {
   current = client;
 }
 
+let explorerToggle: ((enabled: boolean) => void) | null = null;
+
+export function setExplorerToggle(toggle: ((enabled: boolean) => void) | null): void {
+  explorerToggle = toggle;
+}
+
+export function applyExplorerSetting(enabled: boolean): void {
+  explorerToggle?.(enabled);
+}
+
 export function openGitLabSettings(): void {
   current?.openSettings(SETTINGS_ID);
 }

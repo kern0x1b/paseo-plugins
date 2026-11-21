@@ -1,3 +1,4 @@
+import { settingsRpc, type PluginCleanup } from "@getpaseo/plugin";
 import type { PluginClientContext } from "@getpaseo/plugin/client";
 import { startHeaderButtons } from "./client/header-buttons";
 import {
@@ -7,6 +8,7 @@ import {
   PANEL_ID,
   REPO_PANEL_ID,
   SETTINGS_ID,
+  setExplorerToggle,
   setPluginClient,
 } from "./client/plugin-client";
 import { BoardPanel } from "./client/ui/board-panel";
@@ -16,12 +18,12 @@ import { GitLabPanel } from "./client/ui/panel";
 import { RepositoryPanel } from "./client/ui/repo-panel";
 import { GitLabSettings } from "./client/ui/settings";
 import { attachmentSearchRpc } from "./shared/contract";
+import { featureSettings } from "./shared/features";
 
 const ICON = "GitMerge";
 
-export default function contribute(client: PluginClientContext) {
-  setPluginClient(client);
-  const removers = [
+function registerExplorer(client: PluginClientContext): PluginCleanup[] {
+  return [
     client.addWorkspacePanel({
       id: PANEL_ID,
       title: "GitLab",
@@ -62,7 +64,6 @@ export default function contribute(client: PluginClientContext) {
       locations: ["workspace"],
       Component: ItemPanel,
     }),
-    client.addSettingsScreen({ id: SETTINGS_ID, title: "GitLab", icon: ICON, Component: GitLabSettings }),
     client.addCommandCenterItem({
       id: "open-gitlab",
       title: "Open GitLab",
@@ -97,10 +98,39 @@ export default function contribute(client: PluginClientContext) {
       search: attachmentSearchRpc,
     }),
   ];
-  return () => {
-    for (const remove of removers) {
-      remove();
+}
+
+export default function contribute(client: PluginClientContext) {
+  setPluginClient(client);
+  let explorerRemovers: PluginCleanup[] | null = null;
+  const setExplorerEnabled = (enabled: boolean) => {
+    if (enabled && !explorerRemovers) {
+      explorerRemovers = registerExplorer(client);
+    } else if (!enabled && explorerRemovers) {
+      for (const remove of explorerRemovers) remove();
+      explorerRemovers = null;
     }
+  };
+  setExplorerToggle(setExplorerEnabled);
+  const removeSettingsScreen = client.addSettingsScreen({
+    id: SETTINGS_ID,
+    title: "GitLab",
+    icon: ICON,
+    Component: GitLabSettings,
+  });
+  client
+    .rpc(settingsRpc(featureSettings.id).read, {})
+    .then((state) =>
+      setExplorerEnabled(
+        state.status !== "ready" || (state.values as { explorer?: boolean }).explorer !== false,
+      ),
+    )
+    .catch(() => setExplorerEnabled(true));
+
+  return () => {
+    setExplorerEnabled(false);
+    setExplorerToggle(null);
+    removeSettingsScreen();
     setPluginClient(null);
   };
 }
