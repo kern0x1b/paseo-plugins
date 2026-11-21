@@ -24,7 +24,13 @@ function commentOnMyMr(id) {
   };
 }
 
-function makeDaemon({ client, sendToPaseo, initRetryMs }) {
+function tempStateFile(state) {
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "gitlab-router-test-")), "daemon-state.json");
+  if (state) fs.writeFileSync(file, JSON.stringify(state));
+  return file;
+}
+
+function makeDaemon({ client, sendToPaseo, initRetryMs, scope, stateFile = tempStateFile() }) {
   const registry = tempRegistry();
   const dispatcher = new GitLabEventDispatcher({ registry, config: {} });
   const sent = [];
@@ -32,7 +38,15 @@ function makeDaemon({ client, sendToPaseo, initRetryMs }) {
     sent.push(text);
     return sendToPaseo ? sendToPaseo() : { success: true };
   };
-  const daemon = new GitLabDaemon({ client, dispatcher, registry, config: {}, initRetryMs });
+  const daemon = new GitLabDaemon({
+    client,
+    dispatcher,
+    registry,
+    config: {},
+    initRetryMs,
+    scope,
+    stateFile,
+  });
   daemon.currentUser = { username: "me" };
   daemon.relevantMrIids = new Set([7]);
   return { daemon, sent };
@@ -166,4 +180,67 @@ test("a merge request pipeline that fails is sent, also when it starts and fails
   assert.equal(sent.length, 1);
   assert.match(sent[0], /Pipeline #2 for !7: failed/);
   assert.match(sent[0], /Pipeline #1 for !7: running -> failed/);
+});
+
+test("everyone else's events skip mine and mine skip theirs", async () => {
+  const foreign = {
+    id: 30,
+    action_name: "commented on",
+    author_username: "someone",
+    target_type: "Note",
+    note: { noteable_type: "MergeRequest", noteable_iid: 999, body: "x".repeat(500) },
+  };
+  const client = {
+    async getProjectEvents() {
+      return [foreign, commentOnMyMr(31)];
+    },
+  };
+  const others = makeDaemon({ client, scope: "others" });
+  others.daemon.dispatcher.label = "GitLab, other people's events";
+
+  await others.daemon.checkEvents();
+  await others.daemon.deliverQueuedEvents();
+
+  assert.equal(others.sent.length, 1);
+  assert.match(others.sent[0], /^\[GitLab, other people's events\] 1 new event/);
+  assert.match(others.sent[0], /!999 commented on by @someone/);
+  assert.ok(!others.sent[0].includes("comment 31"), "my own MR stays out of everyone else's events");
+  assert.ok(others.sent[0].includes("x".repeat(300) + "…"), "long bodies of other people's events are cut");
+});
+
+test("after a restart the events that happened while the router was down are still sent", async () => {
+  const lastPollAt = new Date(Date.now() - 60_000).toISOString();
+  const before = { ...commentOnMyMr(40), created_at: new Date(Date.now() - 120_000).toISOString() };
+  const during = { ...commentOnMyMr(41), created_at: new Date(Date.now() - 30_000).toISOString() };
+  const client = {
+    host: "https://gitlab.example",
+    defaultProjectId: 1,
+    async getCurrentUser() {
+      return { username: "me", name: "Me" };
+    },
+    async getOpenedMergeRequests() {
+      return [{ iid: 7 }];
+    },
+    async getOpenedIssues() {
+      return [];
+    },
+    async getTodos() {
+      return [];
+    },
+    async getProjectEvents() {
+      return [during, before];
+    },
+    async getPipelines() {
+      return [];
+    },
+  };
+  const { daemon, sent } = makeDaemon({ client, stateFile: tempStateFile({ lastPollAt }) });
+
+  await daemon.init();
+  await daemon.checkEvents();
+  await daemon.deliverQueuedEvents();
+
+  assert.equal(sent.length, 1);
+  assert.match(sent[0], /comment 41/);
+  assert.ok(!sent[0].includes("comment 40"));
 });
