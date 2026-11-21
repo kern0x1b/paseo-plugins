@@ -5,13 +5,13 @@ import path from "node:path";
 import { describe, it } from "node:test";
 import { BaseEventDispatcher } from "../src/index.js";
 
-function createFakePaseo({ archived = [] } = {}) {
+function createFakePaseo({ archived = [], missing = [], broken = false } = {}) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "fleet-kit-paseo-"));
   const calls = path.join(directory, "calls.json");
   const bin = path.join(directory, "paseo");
   fs.writeFileSync(
     bin,
-    `#!/bin/sh\nif [ "$1" = inspect ]; then\n  case " ${archived.join(" ")} " in *" $2 "*) echo '{"Archived":true}';; *) echo '{"Archived":false}';; esac\n  exit 0\nfi\nprintf '%s\\n' "$2" >> "${calls}"\nprintf '%s' "$3" >> "${calls}"\nprintf '\\n' >> "${calls}"\n`,
+    `#!/bin/sh\nif [ "$1" = inspect ]; then\n  ${broken ? 'echo "sh: paseo: command not found" >&2; exit 127' : ":"}\n  case " ${missing.join(" ")} " in *" $2 "*) echo '{"error":{"code":"AGENT_NOT_FOUND"}}'; exit 1;; esac\n  case " ${archived.join(" ")} " in *" $2 "*) echo '{"Archived":true}';; *) echo '{"Archived":false}';; esac\n  exit 0\nfi\nprintf '%s\\n' "$2" >> "${calls}"\nprintf '%s' "$3" >> "${calls}"\nprintf '\\n' >> "${calls}"\n`,
   );
   fs.chmodSync(bin, 0o755);
   return { bin, readCalls: () => fs.readFileSync(calls, "utf8").trim().split("\n") };
@@ -159,5 +159,19 @@ describe("BaseEventDispatcher.dispatchBatch", () => {
     );
     assert.deepEqual(unrouted, []);
     assert.deepEqual(paseo.readCalls(), ["agent-c", "prompt:other", "", "prompt:watched"]);
+  });
+});
+
+describe("BaseEventDispatcher agent status", () => {
+  it("treats an agent Paseo does not know as inactive", async () => {
+    const paseo = createFakePaseo({ missing: ["agent-gone"] });
+    const dispatcher = new TestDispatcher({ registry: registryWith(), config: { paseoBin: paseo.bin } });
+    assert.equal(await dispatcher.isAgentInactive("agent-gone"), true);
+  });
+
+  it("keeps the subscriptions when Paseo itself fails, whatever the error text says", async () => {
+    const paseo = createFakePaseo({ broken: true });
+    const dispatcher = new TestDispatcher({ registry: registryWith(), config: { paseoBin: paseo.bin } });
+    assert.equal(await dispatcher.isAgentInactive("agent-c"), false);
   });
 });

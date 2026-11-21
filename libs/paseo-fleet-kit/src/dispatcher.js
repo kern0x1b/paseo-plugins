@@ -32,14 +32,18 @@ export class BaseEventDispatcher {
       const { stdout } = await execFileAsync(paseoBin, ["inspect", agentId, "--json"]);
       return JSON.parse(stdout).Archived ? "inactive" : "active";
     } catch (err) {
-      return /not found/i.test(`${err.message} ${err.stderr || ""}`) ? "inactive" : "unknown";
+      try {
+        return JSON.parse(err.stdout || "").error?.code === "AGENT_NOT_FOUND" ? "inactive" : "unknown";
+      } catch {
+        return "unknown";
+      }
     }
   }
 
   async isAgentInactive(agentId) {
     this.agentStatusCache = this.agentStatusCache || new Map();
     const cached = this.agentStatusCache.get(agentId);
-    if (cached && (cached.status === "inactive" || Date.now() - cached.at < AGENT_STATUS_TTL_MS)) {
+    if (cached && Date.now() - cached.at < AGENT_STATUS_TTL_MS) {
       return cached.status === "inactive";
     }
     const status = await this.inspectAgent(agentId);
