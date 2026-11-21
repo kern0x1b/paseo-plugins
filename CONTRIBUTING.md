@@ -10,7 +10,7 @@ npm install          # one install for the whole repository; also enables the co
 npm run check        # format check, typecheck and tests across all packages
 ```
 
-Run a single package with `npm test -w paseo-gitlab` or `npm run typecheck -w paseo-usage-sidebar`.
+Run a single package with `npm test -w paseo-gitlab` or `npm run typecheck -w paseo-gitlab`.
 
 ## Before you open a pull request
 
