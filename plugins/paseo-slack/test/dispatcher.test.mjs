@@ -72,3 +72,23 @@ test("EventDispatcher sends a compact message to the coordinator", async () => {
   assert.match(calls[0].prompt, /Hello coordinator$/);
   assert.ok(!calls[0].prompt.includes("Event JSON"), "the raw event is not repeated");
 });
+
+test("a private channel is not a direct message, a group DM is", () => {
+  const dispatcher = new EventDispatcher({
+    registry: { findMatchingAgent: () => null, getCoordinator: () => null },
+    config: {},
+    myUserId: "U_ME",
+  });
+  const message = (channel, channelType) => ({
+    type: "message",
+    user: "U_OTHER",
+    channel,
+    channel_type: channelType,
+    text: "hello",
+  });
+
+  assert.equal(dispatcher.shouldProcess(message("G123", "group")), false);
+  assert.equal(dispatcher.shouldProcess(message("G123", undefined)), false);
+  assert.equal(dispatcher.shouldProcess(message("G456", "mpim")), true);
+  assert.equal(dispatcher.shouldProcess(message("D789", undefined)), true);
+});

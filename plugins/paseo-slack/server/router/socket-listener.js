@@ -438,6 +438,9 @@ export class SocketListener {
             this.advanceLastCheckedTs(data.ts);
             this.recordDispatchedEvent();
 
+            if (!data.channel_type && data.channel?.startsWith("G")) {
+              data.channel_type = await this.channelTypeOf(data.channel);
+            }
             const res = await this.dispatcher.dispatch(data);
             if (res.routed) {
               this.log(`Event routed to ${res.targetAgent} (${res.type})`);
@@ -463,6 +466,21 @@ export class SocketListener {
       if (!this.apiFailureStreakSince) this.apiFailureStreakSince = Date.now();
       this.registerWsFailureBeforeHello(err.message, err.retryAfter);
     }
+  }
+
+  async channelTypeOf(channel) {
+    if (!channel || !channel.startsWith("G")) return undefined;
+    this.channelTypes = this.channelTypes || new Map();
+    if (!this.channelTypes.has(channel)) {
+      try {
+        const { channel: info } = await this.client.call("conversations.info", { channel });
+        this.channelTypes.set(channel, info.is_mpim ? "mpim" : info.is_im ? "im" : "group");
+      } catch (err) {
+        this.warn(`Could not tell what kind of conversation ${channel} is: ${err.message}`);
+        return undefined;
+      }
+    }
+    return this.channelTypes.get(channel);
   }
 
   async getCachedImChannels() {
@@ -496,6 +514,7 @@ export class SocketListener {
           this.recordDispatchedEvent();
 
           msg.channel = ch.id;
+          msg.channel_type = ch.is_mpim ? "mpim" : "im";
           const res = await this.dispatcher.dispatch(msg);
           if (res.routed) {
             this.log(`${label} routed to ${res.targetAgent} (${res.type})`);

@@ -20,9 +20,9 @@ export class EventDispatcher extends BaseEventDispatcher {
     this.myUserId = userId;
   }
 
-  isDirectMessage(channel) {
-    if (!channel) return false;
-    return channel.startsWith("D") || channel.startsWith("G");
+  isDirectMessage(channel, channelType) {
+    if (channelType) return channelType === "im" || channelType === "mpim";
+    return Boolean(channel && channel.startsWith("D"));
   }
 
   isMentioned(text) {
@@ -47,7 +47,7 @@ export class EventDispatcher extends BaseEventDispatcher {
       return true;
     }
 
-    if (this.isDirectMessage(event.channel)) {
+    if (this.isDirectMessage(event.channel, event.channel_type)) {
       return true;
     }
 
@@ -59,7 +59,7 @@ export class EventDispatcher extends BaseEventDispatcher {
   }
 
   buildMessagePrompt(event) {
-    const isDm = this.isDirectMessage(event.channel);
+    const isDm = this.isDirectMessage(event.channel, event.channel_type);
     const isMention = this.isMentioned(event.text);
     const category = isDm ? "Direct Message (DM)" : isMention ? "Mention" : "Thread reply";
 
@@ -77,7 +77,7 @@ export class EventDispatcher extends BaseEventDispatcher {
   }
 
   buildFleetEnvelope(event) {
-    const isDm = this.isDirectMessage(event.channel);
+    const isDm = this.isDirectMessage(event.channel, event.channel_type);
     const isMention = this.isMentioned(event.text);
     const eventType = isDm ? "dm" : isMention ? "mention" : "thread_reply";
     const teamId = event.team || this.config.teamId || "default";

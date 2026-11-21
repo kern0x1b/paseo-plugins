@@ -451,3 +451,28 @@ test("a reconnect catches up the DMs sent while the socket was down, and the fir
     ["300.000000"],
   );
 });
+
+test("the kind of a G conversation is asked from Slack once and cached", async () => {
+  const calls = [];
+  const client = {
+    ...makeFakeClient(),
+    async call(method, params) {
+      calls.push([method, params.channel]);
+      return { channel: { is_mpim: params.channel === "G_MPIM", is_private: true } };
+    },
+  };
+  const listener = new SocketListener({
+    client,
+    dispatcher: makeFakeDispatcher(),
+    stateFile: testStateFile(),
+  });
+
+  assert.equal(await listener.channelTypeOf("G_MPIM"), "mpim");
+  assert.equal(await listener.channelTypeOf("G_PRIVATE"), "group");
+  assert.equal(await listener.channelTypeOf("G_PRIVATE"), "group");
+  assert.equal(await listener.channelTypeOf("D1"), undefined);
+  assert.deepEqual(calls, [
+    ["conversations.info", "G_MPIM"],
+    ["conversations.info", "G_PRIVATE"],
+  ]);
+});
