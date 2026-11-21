@@ -139,3 +139,31 @@ test("an event of a foreign MR is not sent, even with a project-wide subscriptio
 
   assert.equal(sent.length, 0);
 });
+
+test("a merge request pipeline that fails is sent, also when it starts and fails between two polls", async () => {
+  let pipelines = [
+    { id: 1, ref: "refs/merge-requests/7/head", status: "running", web_url: "https://gitlab.example/p/1" },
+  ];
+  const client = {
+    async getPipelines({ scope }) {
+      assert.equal(scope, undefined, "merge request pipelines are not limited to branches");
+      return pipelines;
+    },
+  };
+  const { daemon, sent } = makeDaemon({ client });
+
+  await daemon.checkPipelines();
+  await daemon.deliverQueuedEvents();
+  assert.equal(sent.length, 0, "the first look only learns the current statuses");
+
+  pipelines = [
+    { id: 2, ref: "refs/merge-requests/7/head", status: "failed", web_url: "https://gitlab.example/p/2" },
+    { id: 1, ref: "refs/merge-requests/7/head", status: "failed", web_url: "https://gitlab.example/p/1" },
+  ];
+  await daemon.checkPipelines();
+  await daemon.deliverQueuedEvents();
+
+  assert.equal(sent.length, 1);
+  assert.match(sent[0], /Pipeline #2 for !7: failed/);
+  assert.match(sent[0], /Pipeline #1 for !7: running -> failed/);
+});

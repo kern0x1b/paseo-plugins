@@ -11,6 +11,7 @@ const EVENTS_PAGE_SIZE = 100;
 const MAX_EVENT_PAGES = 5;
 const MAX_DELIVERY_ATTEMPTS = 3;
 const MAX_SEEN_IDS = 2000;
+const FINISHED_PIPELINE_STATUSES = new Set(["failed", "success", "canceled"]);
 const INIT_RETRY_MAX_MS = 5 * 60 * 1000;
 
 function log(...args) {
@@ -78,6 +79,7 @@ export class GitLabDaemon {
     this.deliveryAttempts = new Map();
     this.pendingEvents = [];
     this.pipelineStatuses = new Map();
+    this.pipelinesBaselined = false;
     this.currentUser = null;
     this.relevantMrIids = new Set();
     this.relevantIssueIids = new Set();
@@ -288,11 +290,12 @@ export class GitLabDaemon {
 
       const initialPipelines = await this.client.getPipelines({
         username: this.currentUser?.username || undefined,
-        perPage: 10,
+        perPage: 20,
       });
       for (const p of initialPipelines) {
         this.pipelineStatuses.set(p.id, p.status);
       }
+      this.pipelinesBaselined = true;
 
       log(
         `[GitLab Daemon] Initialized state: ${this.seenTodoIds.size} todos, ${this.seenEventIds.size} events, ${this.pipelineStatuses.size} pipelines cached.`,
@@ -413,34 +416,37 @@ export class GitLabDaemon {
     try {
       const pipelines = await this.client.getPipelines({
         username: this.currentUser?.username || undefined,
-        perPage: 10,
+        perPage: 20,
       });
       for (const pipe of pipelines) {
         const prevStatus = this.pipelineStatuses.get(pipe.id);
         this.pipelineStatuses.set(pipe.id, pipe.status);
 
-        if (!prevStatus) continue;
+        const finished = FINISHED_PIPELINE_STATUSES.has(pipe.status);
+        const changed = prevStatus ? prevStatus !== pipe.status : this.pipelinesBaselined;
+        if (!finished || !changed) continue;
 
-        if (prevStatus !== pipe.status) {
-          if (pipe.status === "failed" || pipe.status === "success" || pipe.status === "canceled") {
-            const event = {
-              category: `Pipeline Alert (${pipe.status.toUpperCase()})`,
-              actionName: `pipeline_${pipe.status}`,
-              author: "GitLab CI/CD",
-              targetType: "Pipeline",
-              targetIid: pipe.id,
-              ref: pipe.ref,
-              title: `Pipeline #${pipe.id} on ${pipe.ref} status changed: ${prevStatus} -> ${pipe.status}`,
-              url: pipe.web_url,
-              raw: pipe,
-            };
+        const mrIid = Number(/^refs\/merge-requests\/(\d+)\//.exec(pipe.ref || "")?.[1]) || null;
+        const target = mrIid ? `!${mrIid}` : pipe.ref;
+        const transition = prevStatus ? `${prevStatus} -> ${pipe.status}` : pipe.status;
+        const event = {
+          category: `Pipeline Alert (${pipe.status.toUpperCase()})`,
+          actionName: `pipeline_${pipe.status}`,
+          author: "GitLab CI/CD",
+          targetType: "Pipeline",
+          targetIid: pipe.id,
+          mrIid,
+          ref: pipe.ref,
+          title: `Pipeline #${pipe.id} for ${target}: ${transition}`,
+          url: pipe.web_url,
+          raw: pipe,
+        };
 
-            this.queueEvent(`pipeline:${pipe.id}:${pipe.status}`, event, () =>
-              this.pipelineStatuses.set(pipe.id, prevStatus),
-            );
-          }
-        }
+        this.queueEvent(`pipeline:${pipe.id}:${pipe.status}`, event, () =>
+          prevStatus ? this.pipelineStatuses.set(pipe.id, prevStatus) : this.pipelineStatuses.delete(pipe.id),
+        );
       }
+      this.pipelinesBaselined = true;
       return { success: true, source: "pipelines" };
     } catch (err) {
       logError(`[GitLab Daemon] Error checking pipelines: ${err.message}`);

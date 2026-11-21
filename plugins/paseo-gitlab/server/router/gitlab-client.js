@@ -127,11 +127,12 @@ export class GitLabClient {
 
   async getPipelines({
     projectId = this.defaultProjectId,
-    scope = "branches",
+    scope = null,
     username = null,
     perPage = 10,
   } = {}) {
-    const params = { scope, per_page: perPage };
+    const params = { per_page: perPage };
+    if (scope) params.scope = scope;
     if (username) params.username = username;
     const path = projectId ? `projects/${encodeURIComponent(projectId)}/pipelines` : "pipelines";
     return await this.request(path, {
