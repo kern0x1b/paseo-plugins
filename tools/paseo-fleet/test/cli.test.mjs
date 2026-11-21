@@ -80,6 +80,6 @@ describe('Fleet CLI validate command', () => {
       `node -e "require('node:fs').writeFileSync(process.env.HOME + '/.config/paseo/fleet/config.json', process.argv[1])" '${config}' && node bin/fleet.js status`,
       { encoding: 'utf8', env },
     );
-    assert.match(status, /teams-not-installed daemon: Stopped/);
+    assert.match(status, /teams-not-installed plugin: /);
   });
 });

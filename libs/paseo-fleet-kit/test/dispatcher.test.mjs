@@ -5,13 +5,13 @@ import path from "node:path";
 import { describe, it } from "node:test";
 import { BaseEventDispatcher } from "../src/index.js";
 
-function createFakePaseo() {
+function createFakePaseo({ archived = [] } = {}) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "fleet-kit-paseo-"));
   const calls = path.join(directory, "calls.json");
   const bin = path.join(directory, "paseo");
   fs.writeFileSync(
     bin,
-    `#!/bin/sh\nprintf '%s\\n' "$2" >> "${calls}"\nprintf '%s' "$3" >> "${calls}"\nprintf '\\n' >> "${calls}"\n`,
+    `#!/bin/sh\nif [ "$1" = inspect ]; then\n  case " ${archived.join(" ")} " in *" $2 "*) echo '{"Archived":true}';; *) echo '{"Archived":false}';; esac\n  exit 0\nfi\nprintf '%s\\n' "$2" >> "${calls}"\nprintf '%s' "$3" >> "${calls}"\nprintf '\\n' >> "${calls}"\n`,
   );
   fs.chmodSync(bin, 0o755);
   return { bin, readCalls: () => fs.readFileSync(calls, "utf8").trim().split("\n") };
@@ -88,5 +88,76 @@ describe("BaseEventDispatcher", () => {
     });
     const result = await dispatcher.dispatch({ text: "hi" });
     assert.equal(result.delivery.success, false);
+  });
+
+  it("drops the subscriptions of an archived agent and routes the event to the coordinator", async () => {
+    const paseo = createFakePaseo({ archived: ["agent-old"] });
+    let subscriptions = [
+      { id: "s1", agentId: "agent-old" },
+      { id: "s2", agentId: "agent-x" },
+    ];
+    const registry = {
+      findMatchingAgent: () => subscriptions.find((s) => s.agentId === "agent-old")?.agentId || null,
+      getCoordinator: () => "agent-c",
+      removeSubscriptions: (shouldRemove) => {
+        const before = subscriptions.length;
+        subscriptions = subscriptions.filter((s) => !shouldRemove(s));
+        return before - subscriptions.length;
+      },
+    };
+    const dispatcher = new TestDispatcher({ registry, config: { paseoBin: paseo.bin } });
+
+    const result = await dispatcher.dispatch({ text: "hi" });
+
+    assert.equal(result.type, "coordinator");
+    assert.deepEqual(subscriptions, [{ id: "s2", agentId: "agent-x" }]);
+    assert.equal(paseo.readCalls()[0], "agent-c");
+  });
+
+  it("unbinds an archived coordinator and sends nothing", async () => {
+    const paseo = createFakePaseo({ archived: ["agent-c"] });
+    let coordinator = "agent-c";
+    const registry = {
+      findMatchingAgent: () => null,
+      getCoordinator: () => coordinator,
+      setCoordinator: (agentId) => {
+        coordinator = agentId;
+      },
+      removeSubscriptions: () => 0,
+    };
+    const dispatcher = new TestDispatcher({ registry, config: { paseoBin: paseo.bin } });
+
+    const delivery = await dispatcher.sendToPaseo("agent-c", "hi");
+
+    assert.equal(delivery.inactive, true);
+    assert.equal(coordinator, null);
+    assert.equal(fs.existsSync(path.join(path.dirname(paseo.bin), "calls.json")), false);
+  });
+});
+
+describe("BaseEventDispatcher.dispatchBatch", () => {
+  it("sends one message per target and moves the events of an archived subscriber to the coordinator", async () => {
+    const paseo = createFakePaseo({ archived: ["agent-old"] });
+    const registry = {
+      findMatchingAgent: (event) => (event.text === "watched" ? "agent-old" : null),
+      getCoordinator: () => "agent-c",
+      removeSubscriptions: () => 1,
+    };
+    const dispatcher = new TestDispatcher({ registry, config: { paseoBin: paseo.bin } });
+
+    const { results, unrouted } = await dispatcher.dispatchBatch([
+      { text: "watched" },
+      { text: "other" },
+      { text: "noise", noise: true },
+    ]);
+
+    assert.equal(results.length, 1);
+    assert.equal(results[0].agentId, "agent-c");
+    assert.deepEqual(
+      results[0].events.map((event) => event.text),
+      ["other", "watched"],
+    );
+    assert.deepEqual(unrouted, []);
+    assert.deepEqual(paseo.readCalls(), ["agent-c", "prompt:other", "", "prompt:watched"]);
   });
 });

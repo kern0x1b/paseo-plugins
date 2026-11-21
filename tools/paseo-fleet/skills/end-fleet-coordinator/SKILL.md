@@ -1,12 +1,12 @@
 ---
 name: end-fleet-coordinator
-description: Stop the Fleet Coordinator session: cleanly stops all background push daemons (GitLab, Slack) and deactivates event routing.
+description: Stop the Fleet Coordinator session: clears the coordinator binding on the GitLab and Slack adapters and deactivates event routing. The router plugins keep running.
 user-invocable: true
 ---
 
 # End Fleet Coordinator
 
-Use this skill to safely shut down the Fleet Coordinator session and stop all background push daemons.
+Use this skill to safely shut down the Fleet Coordinator session and unbind it from the GitLab and Slack adapters.
 
 ---
 
@@ -20,10 +20,10 @@ fleet stop
 
 This command automatically:
 
-1. Terminates the running Slack event listener daemon (`slack daemon stop`).
-2. Terminates the running GitLab event router daemon (`gitlab daemon stop`).
-3. Clears active coordinator bindings so no orphaned events are dispatched.
-4. Ensures no background polling or WebSocket connections remain active.
+1. Clears the coordinator binding on the Slack adapter (`slack unset-coordinator`).
+2. Clears the coordinator binding on the GitLab adapter (`gitlab unset-coordinator`).
+3. Clears the fleet coordinator binding so no orphaned events are dispatched.
+4. Leaves the `gitlab` and `slack` plugins running. To stop one, run `paseo plugin disable <id>`.
 
 ---
 
@@ -31,6 +31,6 @@ This command automatically:
 
 After executing `fleet stop`, confirm to the user that:
 
-- Background push daemons have been cleanly stopped.
-- Polling and WebSocket listeners are inactive.
+- The coordinator binding is cleared on the GitLab and Slack adapters.
+- The `gitlab` and `slack` plugins are still running (`paseo plugin ls`).
 - No further events will be routed to Paseo until the coordinator is restarted with `/start-fleet-coordinator`.

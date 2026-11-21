@@ -1,0 +1,6 @@
+{
+  "id": "slack",
+  "requirements": {
+    "paseo": ">=0.16.0"
+  }
+}

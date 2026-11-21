@@ -1,6 +1,6 @@
 ---
 name: start-fleet-coordinator
-description: Start the Fleet Coordinator session: binds your agent ID, launches background push daemons, sweeps every adapter for work that was already waiting, verifies it, presents a prioritised plan, dispatches workers, and then listens for inbound fleet events.
+description: Start the Fleet Coordinator session: binds your agent ID, enables the GitLab and Slack router plugins, sweeps every adapter for work that was already waiting, verifies it, presents a prioritised plan, dispatches workers, and then listens for inbound fleet events.
 user-invocable: true
 argument-hint: "[--since <iso|24h|3d>]"
 ---
@@ -17,9 +17,9 @@ Activate the current Paseo agent session as the Fleet Coordinator, catch up on e
 fleet activate
 ```
 
-This registers `$PASEO_AGENT_ID` as the coordinator, binds it to every adapter daemon, starts the daemons that are not running, and lists the registered channels.
+This registers `$PASEO_AGENT_ID` as the coordinator, binds it to every adapter, enables the adapter plugins that are installed but disabled, and lists the registered channels.
 
-Daemons only report events that happen after they start. Work that was already waiting is not pushed; step 2 collects it.
+The event routers only report events that happen after they start. Work that was already waiting is not pushed; step 2 collects it.
 
 ## 2. Sweep
 
@@ -48,4 +48,4 @@ Within the Authority Rules of the [coordinator skill](../coordinator/SKILL.md):
 
 ## 5. Listen
 
-Report the coordinator ID, running daemons, active channels, the plan, and what was dispatched. Then process inbound `paseo-fleet/v1` envelopes as they arrive, deduplicating them by `urn` against the items already in the plan.
+Report the coordinator ID, plugin status from `fleet status`, active channels, the plan, and what was dispatched. Then process inbound `paseo-fleet/v1` envelopes as they arrive, deduplicating them by `urn` against the items already in the plan.

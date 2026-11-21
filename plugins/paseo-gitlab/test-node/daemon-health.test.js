@@ -3,10 +3,10 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { GitLabDaemon } from "../src/daemon.js";
-import { GitLabEventDispatcher } from "../src/dispatcher.js";
-import { SubscriptionRegistry } from "../src/subscriptions.js";
-import { HealthMonitor } from "../src/health.js";
+import { GitLabDaemon } from "../server/router/daemon.js";
+import { GitLabEventDispatcher } from "../server/router/dispatcher.js";
+import { SubscriptionRegistry } from "../server/router/subscriptions.js";
+import { HealthMonitor } from "../server/router/health.js";
 
 function fakeClock(startMs = 0) {
   let ms = startMs;

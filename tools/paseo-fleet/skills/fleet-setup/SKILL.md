@@ -1,6 +1,6 @@
 ---
 name: fleet-setup
-description: Automatically provisions and connects a multi-agent fleet on the user machine without manual configuration. Detects available push adapters (Slack, GitLab, GitHub, etc.), initializes the fleet coordinator session, registers communication channels, binds daemon routers, and verifies end-to-end event connectivity.
+description: Automatically provisions and connects a multi-agent fleet on the user machine without manual configuration. Detects available push adapters (Slack, GitLab, GitHub, etc.), initializes the fleet coordinator session, registers communication channels, binds adapter event routers, and verifies end-to-end event connectivity.
 ---
 
 # Autonomous Fleet Setup Guide for Agents
@@ -67,7 +67,7 @@ For each discovered adapter, register it with the fleet:
    # Register channel in fleet
    fleet channel add slack --tool slack_send_message --cli "slack send" --type chat --primary
 
-   # Bind daemon to the Coordinator agent
+   # Bind the adapter's event router to the Coordinator agent
    slack set-coordinator <coordinator_agent_id>
    ```
 
@@ -77,7 +77,7 @@ For each discovered adapter, register it with the fleet:
    # Register channel in fleet
    fleet channel add gitlab --tool gitlab_add_note --cli "gitlab comment" --type forge
 
-   # Bind daemon to the Coordinator agent
+   # Bind the adapter's event router to the Coordinator agent
    gitlab set-coordinator <coordinator_agent_id>
    ```
 
@@ -88,20 +88,21 @@ For each discovered adapter, register it with the fleet:
 
 ---
 
-### Step 5: Start Background Daemons
+### Step 5: Install and Check the Router Plugins
 
-Check if background routers are running and start them if inactive:
+The GitLab and Slack event routers run as the server part of the Paseo plugins `gitlab` and `slack`. Make sure both are installed and running. Skip the `add` for a plugin that `paseo plugin ls` already lists:
 
 ```bash
-# Check status
+# Install the router plugins if missing
+paseo plugin add git:kern0x1b/paseo-plugins:plugins/paseo-gitlab
+paseo plugin add git:kern0x1b/paseo-plugins:plugins/paseo-slack
+
+# Check that both plugins are running
+paseo plugin ls
 fleet status
-
-# Start Slack daemon if available
-slack daemon status || (slack daemon &)
-
-# Start GitLab daemon if available
-gitlab daemon status || (gitlab daemon &)
 ```
+
+`fleet activate` enables a plugin that is installed but disabled. Read router logs with `paseo plugin logs gitlab` or `paseo plugin logs slack`.
 
 ---
 

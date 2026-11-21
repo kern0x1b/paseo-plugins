@@ -19,13 +19,11 @@ export {
 } from 'paseo-fleet-kit';
 
 export {
-  DEFAULT_DAEMON_ARGS,
   resolveAdapters,
   bindCoordinator,
   unbindCoordinator,
-  readDaemonStatus,
-  startDaemon,
-  stopDaemon,
+  readRouterStatus,
+  enableRouter,
 } from './adapters.js';
 
 export { DEFAULT_ADAPTERS, parseSince, resolveSweepSince, mergeItemsByUrn, runSweep } from './sweep.js';

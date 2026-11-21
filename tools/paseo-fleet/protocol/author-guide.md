@@ -3,7 +3,7 @@
 An adapter connects one external platform (Slack, GitLab, Microsoft Teams, Jira, Discord) to the
 fleet Coordinator. This guide is the complete contract. Two reference adapters implement it:
 
-- [`tools/paseo-slack`](../../paseo-slack): chat platform, WebSocket events, subscriptions per thread.
+- [`plugins/paseo-slack`](../../../plugins/paseo-slack): chat platform, WebSocket events, subscriptions per thread.
 - [`plugins/paseo-gitlab`](../../../plugins/paseo-gitlab): forge, polling, health alerts.
 
 Read them next to this guide. The file names below are the same in both.
@@ -23,18 +23,18 @@ install the command on `PATH`, add its name to `adapters`, and `fleet activate`,
 An adapter is one executable, `<name>`, with these subcommands. Items marked fleet are called by the
 `fleet` CLI; the rest are for the user and the agents.
 
-| Command                               | Called by | Behaviour                                                                                       |
-| ------------------------------------- | --------- | ----------------------------------------------------------------------------------------------- |
-| `<name> daemon`                       | fleet     | Run the real-time event router in the foreground until `SIGTERM`.                               |
-| `<name> daemon status`                | fleet     | Print `{"running": true, "pid": 123, ...}` as JSON. `running` is false when no daemon is alive. |
-| `<name> daemon stop`                  | fleet     | Send `SIGTERM` to the daemon and wait for it to exit.                                           |
-| `<name> set-coordinator <id>`         | fleet     | Store the Coordinator agent ID. `none` or `--clear` unsets it.                                  |
-| `<name> unset-coordinator`            | fleet     | Clear the stored Coordinator agent ID.                                                          |
-| `<name> snapshot [--since <iso>]`     | fleet     | Print what already waits on the user as one JSON document (section 5 of the protocol).          |
-| `<name> subscribe --agent <id> …`     | agents    | Route matching events to one specific agent instead of the Coordinator (section 4).             |
-| `<name> unsubscribe`, `subscriptions` | agents    | Remove and list subscriptions.                                                                  |
-| `<name> mcp`                          | agents    | Stdio MCP server exposing the platform's tools, including the one named in `reply_action`.      |
-| `<name> send …`                       | agents    | Post a reply, the CLI form of the MCP reply tool (`gitlab comment` in the GitLab adapter).      |
+| Command                               | Called by | Behaviour                                                                                                                                    |
+| ------------------------------------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `<name> daemon`                       | plugin    | Run the real-time event router in the foreground until `SIGTERM`. Reference adapters run it as the plugin's server part instead (section 5). |
+| `<name> daemon status`                | user      | Print `{"running": true, "pid": 123, ...}` as JSON for a legacy background router. `running` is false when none is alive.                    |
+| `<name> daemon stop`                  | user      | Send `SIGTERM` to a legacy background router and wait for it to exit.                                                                        |
+| `<name> set-coordinator <id>`         | fleet     | Store the Coordinator agent ID. `none` or `--clear` unsets it.                                                                               |
+| `<name> unset-coordinator`            | fleet     | Clear the stored Coordinator agent ID.                                                                                                       |
+| `<name> snapshot [--since <iso>]`     | fleet     | Print what already waits on the user as one JSON document (section 5 of the protocol).                                                       |
+| `<name> subscribe --agent <id> …`     | agents    | Route matching events to one specific agent instead of the Coordinator (section 4).                                                          |
+| `<name> unsubscribe`, `subscriptions` | agents    | Remove and list subscriptions.                                                                                                               |
+| `<name> mcp`                          | agents    | Stdio MCP server exposing the platform's tools, including the one named in `reply_action`.                                                   |
+| `<name> send …`                       | agents    | Post a reply, the CLI form of the MCP reply tool (`gitlab comment` in the GitLab adapter).                                                   |
 
 An adapter that skips `subscribe` and `mcp` still works as a push source, but the Coordinator cannot
 reply through it and agents cannot follow a single thread.
@@ -95,11 +95,14 @@ empty matches anything. Adding an identical subscription replaces the old one. `
 `remove` are the whole API. Extend `BaseSubscriptionRegistry` and write `add`, `remove` and
 `findMatchingAgent`.
 
-## 5. Daemon rules
+## 5. Event router rules
 
+- Run the router as the server part of a Paseo plugin, as `plugins/paseo-gitlab` and `plugins/paseo-slack`
+  do with `index.server.ts`. Paseo runs it: `paseo plugin ls` shows its status and `paseo plugin logs <id>`
+  shows its logs.
 - Write `daemon-state.json` (`pid`, `running`, `startedAt`, `lastEventAt`, `eventsDispatched`) so
-  `daemon status` can answer without talking to the process.
-- Reload the registry on every event. A coordinator change must apply to the running daemon without a
+  the router's health can be read without talking to the process.
+- Reload the registry on every event. A coordinator change must apply to the running router without a
   restart.
 - Log one line per event with the target agent. Do not log message content or tokens.
 - Report a failing source to the Coordinator once when it breaks and once when it recovers, as the GitLab
@@ -108,7 +111,7 @@ empty matches anything. Adding an identical subscription replaces the old one. `
 
 ## 6. Snapshot
 
-Push events only cover what happens while the daemon runs. `snapshot` covers what is already waiting.
+Push events only cover what happens while the event router runs. `snapshot` covers what is already waiting.
 
 - Use the platform's own notion of "waiting on me": to-dos, review requests, assignments, unanswered
   direct messages and mentions.
@@ -127,8 +130,8 @@ fleet channel add teams:work --tool teams_send_message --cli "teams send" --type
   --instance <tenant-id> --scope <team-id>
 ```
 
-Then add the adapter name to `adapters` in `~/.config/paseo/fleet/config.json`. If the daemon needs
-extra flags, add them under `adapterDaemonArgs` (for example `{ "teams": ["--tenant", "work"] }`).
+Then add the adapter name to `adapters` in `~/.config/paseo/fleet/config.json`, and ship the event router
+as the server part of a Paseo plugin (section 5).
 
 ## 8. Worked mapping: Microsoft Teams
 
@@ -150,11 +153,11 @@ directory, as `tools/paseo-fleet/test/isolated-home.mjs` does.
 
 ## 9. Checklist
 
-- [ ] `<name> daemon status` prints JSON with `running` and `pid`.
+- [ ] The event router runs as the plugin's server part and `paseo plugin ls` shows it running.
 - [ ] `set-coordinator` and `unset-coordinator` persist and clear the ID.
 - [ ] A synthetic event passes `fleet validate -`.
 - [ ] `<name> snapshot | fleet validate -` passes, and an auth failure exits non-zero.
 - [ ] Event IDs are deterministic; a repeated event produces the same `id`.
 - [ ] `reply_action.params` is enough to reply without any other lookup.
-- [ ] The adapter name is in `adapters`; `fleet status` lists its daemon.
+- [ ] The adapter name is in `adapters`; `fleet status` lists its plugin status.
 - [ ] Tests run offline and leave the real config untouched.

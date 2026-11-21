@@ -57,11 +57,11 @@ Enables autonomous agent teams to triage incoming events from external channels 
 
 ### User-Invocable Skills
 
-| Skill                 | Invocation Command         | Description                                                                                                                                                                      |
-| --------------------- | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Start Coordinator** | `/start-fleet-coordinator` | **One-touch autonomous activation.** Self-detects `$PASEO_AGENT_ID`, binds to Slack & GitLab routers, launches background daemons, verifies push channels, and begins listening. |
-| **End Coordinator**   | `/end-fleet-coordinator`   | **One-touch shutdown.** Sends `SIGTERM` to all background daemons, clears coordinator bindings, and deactivates event routing. Alias: `/stop-fleet-coordinator`.                 |
-| **Fleet Setup**       | `fleet-setup`              | Automatically discovers installed CLI push adapters (`which slack`, `which gitlab`), provisions directories, registers channels, and verifies connectivity.                      |
+| Skill                 | Invocation Command         | Description                                                                                                                                                                                    |
+| --------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Start Coordinator** | `/start-fleet-coordinator` | **One-touch autonomous activation.** Self-detects `$PASEO_AGENT_ID`, binds to Slack & GitLab adapters, enables their router plugins if disabled, verifies push channels, and begins listening. |
+| **End Coordinator**   | `/end-fleet-coordinator`   | **One-touch shutdown.** Clears coordinator bindings on the Slack & GitLab adapters and deactivates event routing. The router plugins keep running. Alias: `/stop-fleet-coordinator`.           |
+| **Fleet Setup**       | `fleet-setup`              | Automatically discovers installed CLI push adapters (`which slack`, `which gitlab`), provisions directories, registers channels, and verifies connectivity.                                    |
 
 ### Autonomous Agent Roles
 
@@ -78,26 +78,28 @@ Enables autonomous agent teams to triage incoming events from external channels 
 Start and stop the entire multi-agent fleet with zero manual file editing:
 
 ```bash
-# 1. Activate the current agent session as Coordinator and launch background daemons
+# 1. Activate the current agent session as Coordinator and enable the router plugins
 fleet activate
 
 # 2. Collect everything that was already waiting on you from every adapter
 fleet sweep
 
-# 3. Check coordinator liveness, channels, and background daemon status
+# 3. Check coordinator liveness, channels, and router plugin status
 fleet status
 
-# 4. Cleanly shut down daemons and unbind coordinator
+# 4. Unbind the coordinator from the adapters (the router plugins keep running)
 fleet stop
 ```
+
+Router health and logs: `paseo plugin ls`, `paseo plugin logs gitlab`, `paseo plugin logs slack`.
 
 When running inside a Paseo agent session, invoking `/start-fleet-coordinator` automatically calls `fleet activate`, which:
 
 1. Detects the unique session ID (`$PASEO_AGENT_ID`).
 2. Registers the ID as the active Coordinator in `~/.config/paseo/fleet/config.json`.
-3. Binds the ID to the Slack daemon (`slack set-coordinator <id>`).
-4. Binds the ID to the GitLab daemon (`gitlab set-coordinator <id>`).
-5. Checks if daemons are already running; if not, spawns them in background (`slack daemon` and `gitlab daemon --all-hours`).
+3. Binds the ID to the Slack adapter (`slack set-coordinator <id>`).
+4. Binds the ID to the GitLab adapter (`gitlab set-coordinator <id>`).
+5. Enables the `slack` and `gitlab` plugins if they are installed but disabled (`paseo plugin enable <id>`). The event routers run inside Paseo as the server part of these plugins, so activation starts no processes.
 6. Reads `~/.config/paseo/fleet/channels.json` and reports ready channels.
 
 The skill then runs `fleet sweep`, verifies every item against its source, presents a prioritised plan, dispatches Workers for the items that need code, and queues every outbound action (messages, comments, pushes, merge requests) for the user's approval before it starts listening for new events.
@@ -145,10 +147,10 @@ The fleet protocol prevents collisions across multiple projects, repositories, a
 # Initialize fleet directories (~/.config/paseo/fleet/)
 fleet init
 
-# Activate current agent ($PASEO_AGENT_ID) as coordinator & start daemons
+# Activate current agent ($PASEO_AGENT_ID) as coordinator & enable router plugins
 fleet activate
 
-# Check fleet status, coordinator binding, and background daemon health
+# Check fleet status, coordinator binding, and router plugin status
 fleet status
 
 # Collect waiting work from every adapter (default: since the last sweep, at least 24h back)
@@ -169,7 +171,7 @@ fleet channel rm gitlab:work
 # Dispatch synthetic test event to verify round-trip delivery
 fleet test-event --channel slack:work
 
-# Stop all background daemons and unbind coordinator
+# Unbind coordinator from the adapters (router plugins keep running)
 fleet stop
 ```
 

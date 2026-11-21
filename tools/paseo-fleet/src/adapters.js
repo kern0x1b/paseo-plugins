@@ -1,24 +1,8 @@
-import { execFileSync, spawn } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { DEFAULT_ADAPTERS } from './sweep.js';
-
-export const DEFAULT_DAEMON_ARGS = { gitlab: ['--all-hours'] };
 
 export function resolveAdapters(config) {
   return config.adapters || DEFAULT_ADAPTERS;
-}
-
-function daemonArgsFor(adapter, config) {
-  return (config.adapterDaemonArgs || DEFAULT_DAEMON_ARGS)[adapter] || [];
-}
-
-function isPidAlive(pid) {
-  if (!pid) return false;
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 function runQuietly(adapter, args) {
@@ -38,29 +22,24 @@ export function unbindCoordinator(adapter) {
   return runQuietly(adapter, ['unset-coordinator']);
 }
 
-export function readDaemonStatus(adapter) {
+export function readRouterStatus(adapter, { paseoBin = 'paseo', run = execFileSync } = {}) {
   try {
-    const output = execFileSync(adapter, ['daemon', 'status'], {
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-    });
-    const status = JSON.parse(output);
-    if (status && status.running && status.pid && isPidAlive(status.pid)) {
-      return { running: true, pid: status.pid };
-    }
-  } catch {}
-  return { running: false, pid: null };
+    const plugins = JSON.parse(
+      run(paseoBin, ['plugin', 'ls', '--json'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }),
+    );
+    const plugin = plugins.find((entry) => entry.id === adapter);
+    if (!plugin) return { installed: false, running: false, status: 'not installed' };
+    return { installed: true, running: plugin.status === 'running', status: plugin.status };
+  } catch {
+    return { installed: false, running: false, status: 'unknown (paseo plugin ls failed)' };
+  }
 }
 
-export function startDaemon(adapter, config) {
-  const child = spawn(adapter, ['daemon', ...daemonArgsFor(adapter, config)], {
-    detached: true,
-    stdio: 'ignore',
-  });
-  child.unref();
-  return child.pid;
-}
-
-export function stopDaemon(adapter) {
-  return runQuietly(adapter, ['daemon', 'stop']);
+export function enableRouter(adapter, { paseoBin = 'paseo', run = execFileSync } = {}) {
+  try {
+    run(paseoBin, ['plugin', 'enable', adapter], { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
 }

@@ -1,12 +1,10 @@
 #!/usr/bin/env node
 
-import { GitLabClient } from "../src/gitlab-client.js";
-import { SubscriptionRegistry } from "../src/subscriptions.js";
-import { EventDispatcher } from "../src/dispatcher.js";
-import { GitLabDaemon } from "../src/daemon.js";
-import { McpServer } from "../src/mcp.js";
-import { GitLabSnapshot } from "../src/snapshot.js";
-import { loadConfig, saveConfig, getConfigPath } from "../src/config.js";
+import { GitLabClient } from "../server/router/gitlab-client.js";
+import { SubscriptionRegistry } from "../server/router/subscriptions.js";
+import { McpServer } from "../server/router/mcp.js";
+import { GitLabSnapshot } from "../server/router/snapshot.js";
+import { loadConfig, saveConfig, getConfigPath } from "../server/router/config.js";
 import path from "node:path";
 import os from "node:os";
 import fs from "node:fs";
@@ -72,7 +70,7 @@ COMMANDS:
   set-coordinator <agent-id>       Set the default Coordinator Paseo Agent (pass 'none' or --clear to unset)
   unset-coordinator                Clear the default Coordinator Paseo Agent
 
-  daemon                           Start the real-time event router daemon (push updates to Paseo agents)
+  daemon status|stop               Inspect or stop a legacy background router (the router now runs in the gitlab plugin)
                                    Options: --interval <seconds> (default: 60s) --dry-run (log dispatches instead of sending)
   mcp                              Run the stdio MCP server for Paseo / Claude / Antigravity / OpenCode
   api <endpoint> [key=value...]    Call any GitLab REST API v4 endpoint directly
@@ -85,7 +83,6 @@ EXAMPLES:
   gitlab mr 101
   gitlab subscribe --agent agent-worker-1 --mr 101
   gitlab set-coordinator agent-coord-1
-  gitlab daemon
 `);
 }
 
@@ -420,48 +417,10 @@ async function main() {
           break;
         }
 
-        if (fs.existsSync(stateFile)) {
-          try {
-            const state = JSON.parse(fs.readFileSync(stateFile, "utf8"));
-            if (state.pid) {
-              try {
-                process.kill(state.pid, 0);
-                console.error(
-                  `A GitLab daemon is already running (PID ${state.pid}). Use 'gitlab daemon stop' first.`,
-                );
-                process.exit(1);
-              } catch {
-                fs.unlinkSync(stateFile);
-              }
-            }
-          } catch {}
-        }
-
-        const dispatcher = new EventDispatcher({ registry, config: client.config });
-        const intervalMs = flags.interval ? parseInt(flags.interval, 10) * 1000 : undefined;
-        const workHoursOnly = !flags.force && (flags["all-hours"] ? false : true);
-        const dryRun = Boolean(flags["dry-run"]);
-        const daemon = new GitLabDaemon({
-          client,
-          dispatcher,
-          registry,
-          pollIntervalMs: intervalMs,
-          workHoursOnly,
-          dryRun,
-        });
-
-        process.on("SIGINT", () => {
-          daemon.stop();
-          process.exit(0);
-        });
-        process.on("SIGTERM", () => {
-          daemon.stop();
-          process.exit(0);
-        });
-
-        console.log(`Starting gitlab-agent-router daemon...${dryRun ? " (dry-run)" : ""}`);
-        await daemon.start();
-        break;
+        console.error(
+          "The event router runs inside Paseo as the gitlab plugin. Check it with 'paseo plugin ls' and 'paseo plugin logs gitlab'.",
+        );
+        process.exit(1);
       }
 
       case "mcp": {

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { HealthMonitor } from "../src/health.js";
+import { HealthMonitor } from "../server/router/health.js";
 
 function fakeClock(startMs = 0) {
   let ms = startMs;

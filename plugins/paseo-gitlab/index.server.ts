@@ -2,6 +2,7 @@ import type { PluginServerContext } from "@getpaseo/plugin/server";
 import { connect, defaultAuthDeps, disconnect } from "./server/auth";
 import { createHandlers } from "./server/handlers";
 import { withDemo } from "./server/demo";
+import { startEventRouter } from "./server/event-router";
 import { readAccounts, withAccount } from "./server/state";
 import { hostForDirectory } from "./server/workspace";
 import {
@@ -157,5 +158,5 @@ export default function contribute(server: PluginServerContext) {
     console.error(`[gitlab client] ${message}`);
     return { ok: true as const };
   });
-  return () => {};
+  return startEventRouter(server);
 }

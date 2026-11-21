@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { GitLabSnapshot } from "../src/snapshot.js";
+import { GitLabSnapshot } from "../server/router/snapshot.js";
 
 function createFakeClient({ failing = [] } = {}) {
   const mergeRequest = {

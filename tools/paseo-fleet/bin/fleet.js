@@ -14,10 +14,9 @@ import {
 } from '../src/config.js';
 import {
   bindCoordinator,
-  readDaemonStatus,
+  enableRouter,
+  readRouterStatus,
   resolveAdapters,
-  startDaemon,
-  stopDaemon,
   unbindCoordinator,
 } from '../src/adapters.js';
 import { createEventEnvelope, validateEventEnvelope, validateSnapshotDocument } from 'paseo-fleet-kit';
@@ -69,13 +68,13 @@ COMMANDS:
   status                           Show coordinator liveness and registered channel health
   test-event [options]             Dispatch a synthetic test event envelope to the coordinator
                                    Options: --channel <name> --instance <id> --scope <id> --dry-run
-  activate [agent-id]              Self-activate current agent ($PASEO_AGENT_ID) as coordinator and start daemons
+  activate [agent-id]              Self-activate current agent ($PASEO_AGENT_ID) as coordinator and enable the adapter plugins
   sweep                            Collect everything currently waiting on you from every adapter as one JSON queue
                                    Options: --since <iso|24h|3d> (default: since the last sweep, at least 24h back;
                                             72h on the first run) --adapters <a,b> --no-cursor
   validate [file|-]                Check an event envelope or a snapshot document (stdin by default)
                                    against the protocol; exit code 1 when invalid
-  stop                             Stop all background fleet push daemons
+  stop                             Clear the coordinator binding from every adapter
   help                             Show this manual
 
 EXAMPLES:
@@ -124,17 +123,15 @@ async function main() {
         const config = loadConfig();
         for (const adapter of resolveAdapters(config)) {
           if (bindCoordinator(adapter, id)) {
-            console.log(`Bound to ${adapter} daemon.`);
+            console.log(`Bound ${adapter} to the coordinator.`);
           }
-          const status = readDaemonStatus(adapter);
+          const status = readRouterStatus(adapter);
           if (status.running) {
-            console.log(`${adapter} daemon is already running (PID ${status.pid}).`);
-            continue;
-          }
-          try {
-            console.log(`Started ${adapter} daemon in background (PID ${startDaemon(adapter, config)}).`);
-          } catch (err) {
-            console.error(`Failed to start ${adapter} daemon: ${err.message}`);
+            console.log(`${adapter} plugin is running inside Paseo.`);
+          } else if (status.installed && enableRouter(adapter)) {
+            console.log(`Enabled the ${adapter} plugin.`);
+          } else {
+            console.error(`The ${adapter} plugin is ${status.status}: install it with 'paseo plugin add'.`);
           }
         }
 
@@ -164,14 +161,11 @@ async function main() {
       case 'stop':
       case 'deactivate': {
         for (const adapter of resolveAdapters(loadConfig())) {
-          if (stopDaemon(adapter)) {
-            console.log(`Stopped ${adapter} daemon.`);
-          }
           unbindCoordinator(adapter);
         }
         saveConfig({ coordinatorAgentId: null });
 
-        console.log(`Fleet daemons stopped and coordinator cleared.`);
+        console.log(`Coordinator cleared; events go only to agents with their own subscriptions.`);
         break;
       }
 
@@ -191,7 +185,7 @@ async function main() {
 
           for (const adapter of resolveAdapters(loadConfig())) {
             if (bindCoordinator(adapter, id)) {
-              console.log(`Bound to ${adapter} daemon.`);
+              console.log(`Bound ${adapter} to the coordinator.`);
             }
           }
         } else if (sub === 'clear') {
@@ -270,8 +264,7 @@ async function main() {
         console.log(`Primary Channel:   ${manifest.primary_channel || 'Not configured'}`);
         console.log(`Active Channels:   ${keys.length > 0 ? keys.join(', ') : 'None registered'}`);
         for (const adapter of resolveAdapters(config)) {
-          const status = readDaemonStatus(adapter);
-          console.log(`${adapter} daemon: ${status.running ? `Running (PID ${status.pid})` : 'Stopped'}`);
+          console.log(`${adapter} plugin: ${readRouterStatus(adapter).status}`);
         }
         break;
       }

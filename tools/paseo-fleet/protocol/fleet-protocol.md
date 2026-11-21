@@ -6,16 +6,16 @@ The **Paseo Fleet Protocol** defines a standardized, model-agnostic contract for
 
 ## 1. Architectural Philosophy
 
-1. **Protocol, Not Monolith**: Tools maintain their own standalone CLI, daemon, and MCP servers (`paseo-slack`, `paseo-gitlab`, `paseo-github`). The fleet coordinates through standardized event payloads rather than centralized runtime plugins.
+1. **Protocol, Not Monolith**: Tools maintain their own standalone CLI, event router, and MCP servers (`paseo-slack`, `paseo-gitlab`, `paseo-github`). An adapter runs its event router as the server part of a Paseo plugin. The fleet coordinates through standardized event payloads rather than centralized runtime plugins.
 2. **Model & Provider Agnostic**: Role instructions never hardcode specific model families (`gpt-*`, `claude-*`, `gemini-*`). Roles define behavior, verification gates, and delegation schemas.
 3. **No Collision, Deterministic Routing**: Tools keep their natural, unique names (`slack_send_message`, `gitlab_add_note`). Events self-describe their exact reply action.
-4. **Deterministic Layer 1 Filtering**: External daemons drop noise before dispatching to Paseo. The Coordinator receives only relevant, high-signal actionable events.
+4. **Deterministic Layer 1 Filtering**: External event routers drop noise before dispatching to Paseo. The Coordinator receives only relevant, high-signal actionable events.
 
 ---
 
 ## 2. Inbound Push Event Envelope
 
-When an external tool or daemon (e.g. `slack daemon`, `gitlab daemon`) detects an event relevant to the fleet, it formats the event as a JSON envelope and delivers it to the Fleet Coordinator agent using:
+When an external tool or its event router (the server part of the `slack` or `gitlab` Paseo plugin) detects an event relevant to the fleet, it formats the event as a JSON envelope and delivers it to the Fleet Coordinator agent using:
 
 ```bash
 paseo send <coordinator_agent_id> '<event_envelope_json>' --no-wait
@@ -145,7 +145,7 @@ Tools register themselves via the `fleet channel add` command without requiring 
 
 ## 5. Snapshot (Pull) Contract
 
-Push events only cover what happens while a daemon runs. The snapshot contract covers what is already waiting when the coordinator starts.
+Push events only cover what happens while an event router runs. The snapshot contract covers what is already waiting when the coordinator starts.
 
 Every adapter provides:
 

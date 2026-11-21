@@ -1,0 +1,49 @@
+{
+  "name": "paseo-slack",
+  "version": "1.1.0",
+  "description": "A mini Slack inside Paseo: full Web API access, personal identity, zero-cost real-time event router, and MCP tools for AI fleets.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kern0x1b/paseo-plugins.git",
+    "directory": "plugins/paseo-slack"
+  },
+  "homepage": "https://github.com/kern0x1b/paseo-plugins/tree/main/plugins/paseo-slack#readme",
+  "bugs": {
+    "url": "https://github.com/kern0x1b/paseo-plugins/issues"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "bin": {
+    "slack": "./bin/slack.js",
+    "paseo-slack": "./bin/slack.js"
+  },
+  "scripts": {
+    "start": "node ./bin/slack.js",
+    "daemon": "node ./bin/slack.js daemon",
+    "mcp": "node ./bin/slack.js mcp",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test \"test/*.test.*\""
+  },
+  "dependencies": {
+    "paseo-fleet-kit": "*"
+  },
+  "files": [
+    "paseo-plugin.json",
+    "index.server.ts",
+    "server/",
+    "bin/"
+  ],
+  "main": "server/router/index.js",
+  "keywords": [
+    "slack",
+    "paseo",
+    "ai-agents",
+    "mcp",
+    "router",
+    "cli"
+  ],
+  "author": "kern0x1b"
+}

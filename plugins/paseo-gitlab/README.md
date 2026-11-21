@@ -274,15 +274,16 @@ a malformed response fails loudly instead of reaching the UI.
 
 ## CLI, Event Router & MCP Server
 
-In addition to the Paseo UI plugin, this repository contains the standalone CLI (`gitlab`), real-time event router daemon (`gitlab daemon`), and stdio Model Context Protocol (MCP) server for AI fleets:
+Besides the UI, the plugin runs the event router inside Paseo, and the package ships a standalone CLI (`gitlab`) and a stdio Model Context Protocol (MCP) server for AI fleets:
 
 ```
-bin/gitlab.js        unified CLI entry point (gitlab mr, issue, todo, daemon, mcp)
-src/mcp.js           MCP server exposing GitLab tools and daemon controls to agents
-src/daemon.js        background event router with working-hours gating and smart polling
-src/subscriptions.js subscription registry with specificity routing for AI fleets
-src/dispatcher.js    delivers events to Paseo agents via CLI or native messaging
-src/gitlab-client.js lightweight REST/GraphQL client reading token from OS keychain
+bin/gitlab.js        unified CLI entry point (gitlab mr, issue, todo, snapshot, mcp)
+server/router/mcp.js           MCP server exposing GitLab tools and subscriptions to agents
+server/event-router.ts starts the event router in the plugin's server part
+server/router/daemon.js event router: polls GitLab and sends one message per poll to Paseo agents
+server/router/subscriptions.js subscription registry with specificity routing for AI fleets
+server/router/dispatcher.js    delivers events to Paseo agents via CLI or native messaging
+server/router/gitlab-client.js lightweight REST/GraphQL client reading token from OS keychain
 ```
 
 ### Commands
@@ -299,19 +300,13 @@ gitlab set-coordinator <agent-id>     # Bind active Paseo coordinator agent ID
 gitlab unset-coordinator              # Clear coordinator binding
 gitlab subscriptions                  # View active MR/issue subscriptions and coordinator
 
-# Daemon Lifecycle
-gitlab daemon                         # Run foreground event router (work hours 08:00-21:00 Mon-Fri)
-gitlab daemon --all-hours             # Run 24/7 event router without sleeping
-gitlab daemon status                  # Check daemon running state and live PID
-gitlab daemon stop                    # Cleanly stop running daemon (SIGTERM)
-
 # Run MCP server
 gitlab mcp
 ```
 
 ### Configuration & Environment Variables
 
-The CLI and daemon read configuration from `~/.config/gitlab-router/config.json`, or environment variables:
+The CLI and the event router read configuration from `~/.config/gitlab-router/config.json`, or environment variables:
 
 | Variable            | Description                         | Default                                                |
 | ------------------- | ----------------------------------- | ------------------------------------------------------ |

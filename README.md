@@ -10,11 +10,10 @@ Install any plugin straight from this repository by pointing at its folder:
 paseo plugin add git:kern0x1b/paseo-plugins:plugins/<name>
 ```
 
-| Folder                                                         | What it does                                                        |
-| -------------------------------------------------------------- | ------------------------------------------------------------------- |
-| [`plugins/paseo-gitlab`](plugins/paseo-gitlab)                 | Mini GitLab in Paseo: explorer UI, CLI, event router and MCP server |
-| [`plugins/paseo-usage-sidebar`](plugins/paseo-usage-sidebar)   | Provider plan usage in the sidebar, matching Settings → Usage       |
-| [`plugins/paseo-midnight-theme`](plugins/paseo-midnight-theme) | Dark theme with a warm near-black background                        |
+| Folder                                         | What it does                                                        |
+| ---------------------------------------------- | ------------------------------------------------------------------- |
+| [`plugins/paseo-gitlab`](plugins/paseo-gitlab) | Mini GitLab in Paseo: explorer UI, CLI, event router and MCP server |
+| [`plugins/paseo-slack`](plugins/paseo-slack)   | Mini Slack in Paseo: Web API access, event router and MCP tools     |
 
 Use `--ref <branch|tag|commit>` to pick a version for the first install.
 
@@ -26,7 +25,6 @@ Standalone command-line tools and shared libraries. None of them is a Paseo plug
 | ---------------------------------------------- | ------------------------------------------------------------------------------ |
 | [`libs/paseo-fleet-kit`](libs/paseo-fleet-kit) | Shared library for adapters: envelope, subscriptions, dispatcher, daemon state |
 | [`tools/paseo-fleet`](tools/paseo-fleet)       | Coordinator, Worker and Reviewer skills plus an event protocol                 |
-| [`tools/paseo-slack`](tools/paseo-slack)       | Mini Slack in Paseo: Web API access, event router and MCP tools                |
 
 ## Connecting another platform
 
@@ -51,6 +49,4 @@ package keeps only its own code, `package.json`, `CHANGELOG.md` and docs. See
 
 ## License
 
-MIT, see [LICENSE](LICENSE). `plugins/paseo-usage-sidebar` started as a fork of
-[RUIIIOVO/paseo-usage-sidebar](https://github.com/RUIIIOVO/paseo-usage-sidebar) and keeps the original
-license and copyright notice in its own `LICENSE`.
+MIT, see [LICENSE](LICENSE).

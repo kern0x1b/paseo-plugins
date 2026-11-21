@@ -21,10 +21,12 @@ This autonomously:
 
 1. Detects your agent ID (`$PASEO_AGENT_ID`).
 2. Registers your ID as the active Coordinator across the fleet (`fleet`, `slack`, `gitlab`).
-3. Launches background push daemons (`gitlab daemon start`, `slack daemon start`) if not already running.
+3. Enables the `gitlab` and `slack` plugins if they are installed but disabled (`paseo plugin enable <id>`). Their event routers run inside Paseo as the server part of each plugin, so activation starts no processes.
 4. Verifies active channels and prepares your session for incoming events.
 
-Daemons only push events that happen after they start. Immediately after activation, run `fleet sweep` to collect the work that was already waiting, then verify and plan it as described in [startup-sweep.md](references/startup-sweep.md) before listening for new events.
+Router health and logs: `paseo plugin ls`, `paseo plugin logs gitlab`, `paseo plugin logs slack`.
+
+The routers only push events that happen after they start. Immediately after activation, run `fleet sweep` to collect the work that was already waiting, then verify and plan it as described in [startup-sweep.md](references/startup-sweep.md) before listening for new events.
 
 ---
 

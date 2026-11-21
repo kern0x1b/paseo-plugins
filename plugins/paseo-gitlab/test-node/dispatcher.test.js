@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { GitLabEventDispatcher } from "../src/dispatcher.js";
+import { GitLabEventDispatcher } from "../server/router/dispatcher.js";
 
 test("GitLabEventDispatcher buildFleetEnvelope generates valid paseo-fleet/v1 schema", () => {
   const dispatcher = new GitLabEventDispatcher({

@@ -25,7 +25,6 @@
     "server/",
     "shared/",
     "bin/",
-    "src/",
     "icon.png"
   ],
   "bin": {
@@ -42,7 +41,7 @@
   "dependencies": {
     "paseo-fleet-kit": "*"
   },
-  "main": "src/index.js",
+  "main": "server/router/index.js",
   "keywords": [
     "gitlab",
     "mcp",

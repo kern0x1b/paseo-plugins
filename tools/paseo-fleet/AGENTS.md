@@ -16,8 +16,8 @@ external push event sources (e.g. `paseo-slack`, `paseo-gitlab`, `paseo-github`,
 | Path                              | Purpose                                                                                     |
 | --------------------------------- | ------------------------------------------------------------------------------------------- |
 | `protocol/`                       | Open Fleet Event Protocol specification, JSON schemas, author guide, and envelope examples. |
-| `skills/start-fleet-coordinator/` | One-touch user skill to self-activate coordinator session and start daemons.                |
-| `skills/end-fleet-coordinator/`   | One-touch user skill to stop daemons and clear coordinator bindings.                        |
+| `skills/start-fleet-coordinator/` | One-touch user skill to self-activate coordinator session and enable router plugins.        |
+| `skills/end-fleet-coordinator/`   | One-touch user skill to clear coordinator bindings on the adapters.                         |
 | `skills/coordinator/`             | Fleet Coordinator orchestrator skill (triage matrix, workspace lifecycle).                  |
 | `skills/worker/`                  | Fleet Worker implementation skill (worktree isolation, TDD, completion).                    |
 | `skills/reviewer/`                | Fleet Reviewer quality gate skill (adversarial audit, security, rubric).                    |

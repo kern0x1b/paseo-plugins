@@ -12,14 +12,14 @@ Use this skill when interacting with GitLab resources (MRs, issues, pipelines, t
 The repository provides three complementary interfaces:
 
 1. **Paseo Plugin:** Native in-editor UI (explorer panels, diff review, issue boards, item tabs).
-2. **Unified CLI (`gitlab`):** Direct terminal access to GitLab resources and fleet daemon management.
+2. **Unified CLI (`gitlab`):** Direct terminal access to GitLab resources and fleet subscriptions.
 3. **MCP Server (`gitlab mcp`):** Stdio MCP server exposing tools to AI agents.
 
 ---
 
 ## Agent Fleet Coordination & Event Router
 
-The event router daemon (`gitlab daemon`) polls GitLab for real-time activity and pushes events directly to Paseo agents via `paseo send <agentId>`.
+The event router runs inside Paseo as the server part of the `gitlab` plugin. It polls GitLab every two minutes and sends the new events of each poll to a Paseo agent as one message. An archived agent loses its subscriptions.
 
 ### 1. Subscription Routing
 
@@ -35,9 +35,6 @@ Agents can subscribe to specific GitLab events or catch-all updates:
 
 | Tool                        | Purpose                                                                                |
 | --------------------------- | -------------------------------------------------------------------------------------- |
-| `gitlab_start_daemon`       | Start the background event router daemon with smart polling and working-hours gating.  |
-| `gitlab_stop_daemon`        | Stop the background event router.                                                      |
-| `gitlab_daemon_status`      | Check daemon process status, uptime, and active subscription count.                    |
 | `gitlab_subscribe`          | Register an agent to receive push notifications for MRs, issues, refs, or event types. |
 | `gitlab_unsubscribe`        | Remove an active subscription.                                                         |
 | `gitlab_list_subscriptions` | List all active agent subscriptions and the current coordinator.                       |
@@ -79,9 +76,6 @@ gitlab subscribe --agent <agent-id> --mr 101
 
 # Set the coordinator agent
 gitlab set-coordinator <agent-id>
-
-# Run daemon in dry-run mode (logs dispatches instead of sending)
-gitlab daemon --dry-run
 ```
 
 ---
