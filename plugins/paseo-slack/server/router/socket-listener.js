@@ -17,6 +17,13 @@ const HEALTH_CHECK_INTERVAL_MS = 30 * 1000;
 const WS_DOWN_ALERT_THRESHOLD_MS = 2 * 60 * 1000;
 const API_FAILURE_ALERT_THRESHOLD_MS = 2 * 60 * 1000;
 
+const AUTH_REJECTED_POLL_INTERVAL_MS = 5 * 60 * 1000;
+const AUTH_REJECTED_ERRORS = ["invalid_auth", "token_revoked", "token_expired", "account_inactive", "not_authed"];
+
+function isAuthRejected(message) {
+  return AUTH_REJECTED_ERRORS.some((code) => String(message).includes(code));
+}
+
 const MODE = { CONNECTING: "connecting", SOCKET: "socket", POLLING: "polling" };
 
 export class SocketListener {
@@ -65,6 +72,8 @@ export class SocketListener {
     this.wsDownSince = null;
     this.apiFailureStreakSince = null;
     this.alertActive = false;
+    this.alertInFlight = false;
+    this.authRejected = false;
     this.healthCheckTimer = null;
   }
 
@@ -235,6 +244,7 @@ export class SocketListener {
     this.wsDownSince = null;
     this.pollingIsFallback = false;
     this.apiFailureStreakSince = null;
+    this.authRejected = false;
 
     if (this.mode !== MODE.SOCKET) {
       this.mode = MODE.SOCKET;
@@ -290,8 +300,13 @@ export class SocketListener {
     const apiFailingTooLong = apiFailingMs > API_FAILURE_ALERT_THRESHOLD_MS;
     const unhealthy = this.pollingIsFallback || wsDownTooLong || apiFailingTooLong;
 
+    if (this.alertInFlight) return;
     if (unhealthy && !this.alertActive) {
       const reasons = [];
+      if (this.authRejected)
+        reasons.push(
+          'Slack rejected the session token (invalid_auth) - refresh it with `slack config xoxcToken="xoxc-..." cookieD="xoxd-..."`',
+        );
       if (this.pollingIsFallback) reasons.push("running in Direct Smart Polling fallback");
       if (wsDownTooLong) reasons.push(`WebSocket has been down for ${Math.round(wsDownMs / 1000)}s`);
       if (apiFailingTooLong)
@@ -304,6 +319,7 @@ export class SocketListener {
 
   async sendHealthAlert(message, nextActiveState) {
     const prompt = `[Slack Daemon Health Alert]\n${message}`;
+    this.alertInFlight = true;
     try {
       const res = await this.dispatcher.notifyCoordinator(prompt);
       if (res.routed) {
@@ -314,11 +330,14 @@ export class SocketListener {
       }
     } catch (err) {
       this.error(`Failed to send health alert, will retry: ${err.message}`);
+    } finally {
+      this.alertInFlight = false;
     }
   }
 
   registerWsFailureBeforeHello(reason, retryAfter) {
     this.wsAttempts += 1;
+    if (isAuthRejected(reason)) this.authRejected = true;
     const backoffMs = retryAfter ? Math.max(this.wsReconnectDelay, retryAfter * 1000) : this.wsReconnectDelay;
     this.error(
       `Failed to establish user-session WebSocket (attempt ${this.wsAttempts}/${this.maxConnectAttempts}): ${reason}`,
@@ -562,6 +581,7 @@ export class SocketListener {
 
         this.pollBackoffMs = Math.floor(this.pollBackoffMs / 2);
         this.apiFailureStreakSince = null;
+        this.authRejected = false;
       } catch (err) {
         if (this.pollingActive && !this.apiFailureStreakSince) this.apiFailureStreakSince = Date.now();
 
@@ -569,6 +589,10 @@ export class SocketListener {
           delay = err.retryAfter * 1000;
           this.pollBackoffMs = delay;
           this.warn(`Rate limited. Backing off for ${delay}ms.`);
+        } else if (isAuthRejected(err.message)) {
+          if (!this.authRejected) this.error(`Poll error: ${err.message}. Retrying every 5 minutes until the token is refreshed.`);
+          this.authRejected = true;
+          delay = AUTH_REJECTED_POLL_INTERVAL_MS;
         } else {
           delay = Math.min(Math.max(this.pollBackoffMs, baseIntervalMs) * 2, 60000);
           this.pollBackoffMs = delay;

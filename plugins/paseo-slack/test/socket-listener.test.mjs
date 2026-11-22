@@ -476,3 +476,52 @@ test("the kind of a G conversation is asked from Slack once and cached", async (
     ["conversations.info", "G_PRIVATE"],
   ]);
 });
+
+test("a health check that runs while an alert is still being delivered does not send it twice", async (t) => {
+  installFakeWebSocket(t);
+  const dispatcher = makeFakeDispatcher();
+  let releaseDelivery;
+  dispatcher.notifyCoordinator = async (message) => {
+    dispatcher.alertCalls.push(message);
+    await new Promise((resolve) => {
+      releaseDelivery = resolve;
+    });
+    return { routed: true, targetAgent: "COORDINATOR" };
+  };
+  const listener = new SocketListener({ client: makeFakeClient(), dispatcher, stateFile: testStateFile() });
+  t.after(() => listener.stop());
+  listener.running = true;
+  listener.pollingIsFallback = true;
+
+  listener.evaluateHealth();
+  listener.evaluateHealth();
+  releaseDelivery();
+  await wait(10);
+  listener.evaluateHealth();
+  await wait(10);
+
+  assert.equal(dispatcher.alertCalls.length, 1);
+});
+
+test("a rejected session token is named in the alert and slows polling to one try per five minutes", async (t) => {
+  installFakeWebSocket(t);
+  const dispatcher = makeFakeDispatcher();
+  let listChannelsCalls = 0;
+  const client = makeFakeClient({
+    listChannels: async () => {
+      listChannelsCalls += 1;
+      throw new Error("Slack API error (conversations.list): invalid_auth");
+    },
+  });
+  const listener = new SocketListener({ client, dispatcher, maxConnectAttempts: 1, stateFile: testStateFile() });
+  t.after(() => listener.stop());
+  listener.running = true;
+
+  listener.registerWsFailureBeforeHello("Slack API error (rtm.connect): invalid_auth");
+  await wait(20);
+
+  assert.equal(dispatcher.alertCalls.length, 1);
+  assert.match(dispatcher.alertCalls[0], /rejected the session token/);
+  assert.equal(listChannelsCalls, 1);
+  assert.equal(listener.pollTimer._idleTimeout, 5 * 60 * 1000);
+});
