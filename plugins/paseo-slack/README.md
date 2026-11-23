@@ -9,7 +9,7 @@ Operates directly as your authentic Slack user identity with zero bot badges, su
 ## Architecture Overview
 
 ```
-                      Slack Real-Time Events (WebSocket / Smart Polling)
+                      Slack Real-Time Events (WebSocket)
                                           │
                                           ▼
                       ┌────────────────────────────────────────┐

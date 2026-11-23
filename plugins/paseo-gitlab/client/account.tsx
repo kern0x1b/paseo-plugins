@@ -5,6 +5,7 @@ import React, { createContext, useCallback, useContext, useSyncExternalStore } f
 import { View } from "react-native";
 import type { input as ZodInput, ZodType } from "zod";
 import { accountsRpc } from "../shared/contract";
+import { readLocalStore, writeLocalStore } from "./local-store";
 
 export const ACCOUNTS_KEY = ["gitlab-accounts"] as const;
 const CHOICES_KEY = "paseo-gitlab:workspace-accounts";
@@ -57,13 +58,7 @@ export function refreshAccountCaches(): void {
 }
 
 const listeners = new Set<() => void>();
-let choices: Record<string, string> = (() => {
-  try {
-    return JSON.parse(globalThis.localStorage?.getItem(CHOICES_KEY) ?? "{}") as Record<string, string>;
-  } catch {
-    return {};
-  }
-})();
+let choices: Record<string, string> = readLocalStore<Record<string, string>>(CHOICES_KEY) ?? {};
 
 export function chooseAccount(workspaceId: string, host: string | null): void {
   const next = { ...choices };
@@ -73,9 +68,7 @@ export function chooseAccount(workspaceId: string, host: string | null): void {
     delete next[workspaceId];
   }
   choices = next;
-  try {
-    globalThis.localStorage?.setItem(CHOICES_KEY, JSON.stringify(choices));
-  } catch {}
+  writeLocalStore(CHOICES_KEY, choices);
   for (const listener of listeners) {
     listener();
   }

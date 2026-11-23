@@ -30,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Standalone CLI (`gitlab` / `paseo-gitlab`): inspect MRs, issues, todos, pipelines, manage subscriptions, daemon, and MCP server
 - Background event router daemon (`gitlab daemon`): real-time event polling, working-hours gating, and direct push delivery to Paseo agents via `paseo send`
-- Fleet subscription registry (`src/subscriptions.js`): specificity-based routing (MR, issue, branch ref, event type, author) with coordinator fallback
+- Fleet subscription registry (`src/subscriptions.js`): specificity-based routing (MR, issue, branch ref, event type, author) with a default route to the coordinator
 - Daemon health monitor (`src/health.js`): streak-based failure detection, alert delivery to coordinator agent, threshold gating, and recovery notifications
 - Stdio Model Context Protocol (MCP) server (`gitlab mcp`): exposes GitLab tools, todos, MR/issue notes, pipelines, and daemon subscription controls to AI agents
 - Issue board panel: board switcher with create, rename, and delete; drag-and-drop cards between and within columns; column add/remove; create issue in column; author and milestone filters

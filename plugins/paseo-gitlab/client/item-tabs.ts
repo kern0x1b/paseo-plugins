@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import type { ItemRef } from "../shared/contract";
+import { readLocalStore, writeLocalStore } from "./local-store";
 
 export interface ItemTab {
   ref: ItemRef;
@@ -18,11 +19,7 @@ const listeners = new Set<() => void>();
 let state: Record<string, WorkspaceTabs> = load();
 
 function load(): Record<string, WorkspaceTabs> {
-  try {
-    return JSON.parse(globalThis.localStorage?.getItem(STORAGE_KEY) ?? "{}") as Record<string, WorkspaceTabs>;
-  } catch {
-    return {};
-  }
+  return readLocalStore<Record<string, WorkspaceTabs>>(STORAGE_KEY) ?? {};
 }
 
 export function tabKey(ref: ItemRef): string {
@@ -31,9 +28,7 @@ export function tabKey(ref: ItemRef): string {
 
 function save(workspaceId: string, next: WorkspaceTabs): void {
   state = { ...state, [workspaceId]: next };
-  try {
-    globalThis.localStorage?.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch {}
+  writeLocalStore(STORAGE_KEY, state);
   for (const listener of listeners) {
     listener();
   }

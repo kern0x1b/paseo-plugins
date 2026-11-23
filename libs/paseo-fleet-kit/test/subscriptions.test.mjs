@@ -53,10 +53,10 @@ describe("BaseSubscriptionRegistry", () => {
     assert.equal(registry.list().length, 1);
   });
 
-  it("survives a corrupt file", () => {
+  it("refuses a corrupt file instead of reading it as empty", () => {
     const registry = createRegistry();
     registry.save({ coordinatorAgentId: "x", subscriptions: [] });
     fs.writeFileSync(registry.filePath, "{not json");
-    assert.deepEqual(registry.load(), { coordinatorAgentId: null, subscriptions: [] });
+    assert.throws(() => registry.load(), /is not valid JSON/);
   });
 });

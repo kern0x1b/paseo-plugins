@@ -72,7 +72,11 @@ export function HtmlBody({ html, host, theme }: { html: string; host: string; th
         pending = fetchImageRef
           .current({ src: url })
           .then((result) => result.dataUrl)
-          .catch(() => null);
+          .catch((err: unknown) => {
+            console.error(`[paseo-gitlab] Could not load the image ${url}:`, err);
+            imageCache.delete(url);
+            return null;
+          });
         imageCache.set(url, pending);
       }
       void pending.then((dataUrl) => {

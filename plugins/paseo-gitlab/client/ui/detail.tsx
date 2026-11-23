@@ -154,6 +154,7 @@ export function Composer({
       await action(text);
       setBody("");
     } catch {
+      // useWrite has already shown the error as a toast; the text stays so it can be sent again.
     } finally {
       setSending(null);
     }
@@ -543,6 +544,7 @@ function EditForm({
     try {
       await onSave({ title: title.trim(), description });
     } catch {
+      // useWrite has already shown the error as a toast; the form stays open so it can be saved again.
     } finally {
       setSaving(false);
     }

@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import type { DiffLine, ItemRef } from "../shared/contract";
+import { readLocalStore, writeLocalStore } from "./local-store";
 
 export interface PendingComment {
   id: string;
@@ -18,12 +19,7 @@ const listeners = new Set<() => void>();
 let reviews: Record<string, PendingComment[]> = load();
 
 function load(): Record<string, PendingComment[]> {
-  try {
-    const raw = globalThis.localStorage?.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as Record<string, PendingComment[]>) : {};
-  } catch {
-    return {};
-  }
+  return readLocalStore<Record<string, PendingComment[]>>(STORAGE_KEY) ?? {};
 }
 
 export function reviewKey(ref: Pick<ItemRef, "projectPath" | "iid">): string {
@@ -38,9 +34,7 @@ function save(key: string, comments: PendingComment[]): void {
     next[key] = comments;
   }
   reviews = next;
-  try {
-    globalThis.localStorage?.setItem(STORAGE_KEY, JSON.stringify(reviews));
-  } catch {}
+  writeLocalStore(STORAGE_KEY, reviews);
   for (const listener of listeners) {
     listener();
   }

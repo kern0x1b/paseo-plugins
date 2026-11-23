@@ -168,7 +168,7 @@ The event router no longer runs as a background process. It runs inside Paseo as
 - `slack daemon status` prints the state of that process as JSON.
 - `slack daemon stop` sends `SIGTERM` to it and waits for it to exit.
 
-The plugin router connects via WebSocket (Socket Mode) if `SLACK_APP_TOKEN` is present, otherwise it falls back to smart direct polling for DMs. The Layer 1 filter drops irrelevant chatter. Each matching DM or mention is sent to the target Paseo agent as one compact message, without the raw event JSON.
+The plugin router connects via WebSocket (Socket Mode) if `SLACK_APP_TOKEN` is present, otherwise through the user-session WebSocket (`rtm.connect`). Without a token, or when Slack refuses it, the router does not start. The Layer 1 filter drops irrelevant chatter. Each matching DM or mention is sent to the target Paseo agent as one compact message, without the raw event JSON.
 
 ---
 

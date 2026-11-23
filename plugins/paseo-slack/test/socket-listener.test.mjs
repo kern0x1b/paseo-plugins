@@ -94,7 +94,6 @@ test("enterSocketMode resets attempts/delay on every hello, not just the first",
   const listener = new SocketListener({
     client,
     dispatcher,
-    maxConnectAttempts: 10,
     stateFile: testStateFile(),
   });
   t.after(() => listener.stop());
@@ -141,7 +140,6 @@ test("a retry that lands during a pending backoff does not open a second socket"
   const listener = new SocketListener({
     client,
     dispatcher,
-    maxConnectAttempts: 10,
     stateFile: testStateFile(),
   });
   t.after(() => listener.stop());
@@ -177,7 +175,6 @@ test("a stale socket that is no longer this.ws cannot dispatch a message", async
   const listener = new SocketListener({
     client,
     dispatcher,
-    maxConnectAttempts: 10,
     stateFile: testStateFile(),
   });
   t.after(() => listener.stop());
@@ -206,59 +203,23 @@ test("a stale socket that is no longer this.ws cannot dispatch a message", async
   assert.equal(dispatcher.calls.length, callsBefore + 1);
 });
 
-test("polling stops on hello and does not reschedule an in-flight tick", async (t) => {
-  installFakeWebSocket(t);
-  const dispatcher = makeFakeDispatcher();
-
-  let resolveHistory;
-  let historyCalls = 0;
-  const client = makeFakeClient({
-    getHistory: () => {
-      historyCalls += 1;
-      return new Promise((resolve) => {
-        resolveHistory = resolve;
-      });
-    },
-  });
-
-  const listener = new SocketListener({ client, dispatcher, stateFile: testStateFile() });
-  t.after(() => listener.stop());
-  listener.running = true;
-  listener.startSmartPolling(5);
-
-  await wait(10);
-  assert.equal(historyCalls, 1);
-  assert.equal(listener.pollingActive, true);
-
-  listener.enterSocketMode();
-  assert.equal(listener.pollingActive, false);
-  assert.equal(listener.pollTimer, null);
-
-  resolveHistory({ messages: [] });
-  await wait(20);
-
-  assert.equal(historyCalls, 1, "no second poll call should happen after hello");
-  assert.equal(listener.pollTimer, null);
-  assert.equal(listener.pollingActive, false);
-});
-
-test("health alert fires once on polling fallback and once on recovery", async (t) => {
+test("health alert fires once while the socket is down and once on recovery", async (t) => {
   installFakeWebSocket(t);
   const dispatcher = makeFakeDispatcher();
   const client = makeFakeClient();
   const listener = new SocketListener({
     client,
     dispatcher,
-    maxConnectAttempts: 10,
     stateFile: testStateFile(),
   });
   t.after(() => listener.stop());
   listener.running = true;
 
-  listener.enterPollingMode();
+  listener.wsDownSince = Date.now() - 3 * 60 * 1000;
+  listener.evaluateHealth();
   await wait(10);
   assert.equal(dispatcher.alertCalls.length, 1);
-  assert.match(dispatcher.alertCalls[0], /Polling fallback/);
+  assert.match(dispatcher.alertCalls[0], /WebSocket has been down/);
 
   listener.evaluateHealth();
   await wait(10);
@@ -285,7 +246,6 @@ test("health alert threshold: a websocket down for over 2 minutes with mode stil
   const listener = new SocketListener({
     client,
     dispatcher,
-    maxConnectAttempts: 10,
     stateFile: testStateFile(),
   });
   t.after(() => listener.stop());
@@ -316,13 +276,13 @@ test("a health alert that fails to deliver is retried on the next evaluation, an
   const listener = new SocketListener({
     client,
     dispatcher,
-    maxConnectAttempts: 10,
     stateFile: testStateFile(),
   });
   t.after(() => listener.stop());
   listener.running = true;
 
-  listener.enterPollingMode();
+  listener.wsDownSince = Date.now() - 3 * 60 * 1000;
+  listener.evaluateHealth();
   await wait(10);
   assert.equal(dispatcher.alertCalls.length, 1, "delivery was attempted");
   assert.equal(listener.alertActive, false, "a failed delivery must not be marked as sent");
@@ -343,49 +303,6 @@ test("a health alert that fails to deliver is retried on the next evaluation, an
   assert.equal(dispatcher.alertCalls.length, 3);
 });
 
-test("a poll failure that lands after the socket already recovered does not raise a false API-failure alert", async (t) => {
-  installFakeWebSocket(t);
-  const dispatcher = makeFakeDispatcher();
-
-  let resolveHistory;
-  let rejectHistory;
-  const client = makeFakeClient({
-    getHistory: () =>
-      new Promise((resolve, reject) => {
-        resolveHistory = resolve;
-        rejectHistory = reject;
-      }),
-  });
-
-  const listener = new SocketListener({
-    client,
-    dispatcher,
-    maxConnectAttempts: 10,
-    stateFile: testStateFile(),
-  });
-  t.after(() => listener.stop());
-  listener.running = true;
-  listener.startSmartPolling(5);
-
-  await wait(10);
-  assert.equal(listener.pollingActive, true);
-
-  listener.enterSocketMode();
-  assert.equal(listener.pollingActive, false);
-  assert.equal(listener.apiFailureStreakSince, null);
-
-  rejectHistory(Object.assign(new Error("ratelimited"), { retryAfter: 30 }));
-  await wait(10);
-
-  assert.equal(listener.apiFailureStreakSince, null, "a stale poll failure must not be recorded");
-
-  listener.evaluateHealth();
-  await wait(10);
-  assert.equal(dispatcher.alertCalls.length, 0, "a healthy socket must not get a false API-failure alert");
-
-  void resolveHistory;
-});
-
 test("a poll keeps messages from every DM newer than the cursor, whatever order the channels come in", async (t) => {
   installFakeWebSocket(t);
   const dispatcher = makeFakeDispatcher();
@@ -404,7 +321,7 @@ test("a poll keeps messages from every DM newer than the cursor, whatever order 
   listener.running = true;
   listener.lastCheckedTs = "100.000000";
 
-  await listener.pollDirectMessages(listener.lastCheckedTs, "Polled DM");
+  await listener.fetchMissedDirectMessages(listener.lastCheckedTs, "Missed DM");
 
   assert.deepEqual(
     dispatcher.calls.map((m) => m.ts),
@@ -491,7 +408,7 @@ test("a health check that runs while an alert is still being delivered does not 
   const listener = new SocketListener({ client: makeFakeClient(), dispatcher, stateFile: testStateFile() });
   t.after(() => listener.stop());
   listener.running = true;
-  listener.pollingIsFallback = true;
+  listener.wsDownSince = Date.now() - 3 * 60 * 1000;
 
   listener.evaluateHealth();
   listener.evaluateHealth();
@@ -503,25 +420,56 @@ test("a health check that runs while an alert is still being delivered does not 
   assert.equal(dispatcher.alertCalls.length, 1);
 });
 
-test("a rejected session token is named in the alert and slows polling to one try per five minutes", async (t) => {
+test("a rejected session token keeps the socket retrying every five minutes and is named in the alert", async (t) => {
   installFakeWebSocket(t);
   const dispatcher = makeFakeDispatcher();
-  let listChannelsCalls = 0;
-  const client = makeFakeClient({
-    listChannels: async () => {
-      listChannelsCalls += 1;
-      throw new Error("Slack API error (conversations.list): invalid_auth");
-    },
-  });
-  const listener = new SocketListener({ client, dispatcher, maxConnectAttempts: 1, stateFile: testStateFile() });
+  const listener = new SocketListener({ client: makeFakeClient(), dispatcher, stateFile: testStateFile() });
   t.after(() => listener.stop());
   listener.running = true;
 
   listener.registerWsFailureBeforeHello("Slack API error (rtm.connect): invalid_auth");
-  await wait(20);
+  assert.equal(listener.wsReconnectTimer._idleTimeout, 5 * 60 * 1000);
+  assert.equal(listener.mode, "connecting", "no second mechanism takes over");
 
+  listener.wsDownSince = Date.now() - 3 * 60 * 1000;
+  listener.evaluateHealth();
+  await wait(10);
   assert.equal(dispatcher.alertCalls.length, 1);
   assert.match(dispatcher.alertCalls[0], /rejected the session token/);
-  assert.equal(listChannelsCalls, 1);
-  assert.equal(listener.pollTimer._idleTimeout, 5 * 60 * 1000);
+});
+
+test("a DM history read that fails is not skipped: the catch-up fails and counts as an API failure", async (t) => {
+  installFakeWebSocket(t);
+  const dispatcher = makeFakeDispatcher();
+  const client = makeFakeClient({
+    listChannels: async () => ({ channels: [{ id: "D1" }, { id: "D2" }] }),
+    getHistory: async ({ channel }) => {
+      if (channel === "D1") throw new Error("Slack API error (conversations.history): internal_error");
+      return { messages: [{ ts: "200.000000", user: "U_OTHER", text: "hi" }] };
+    },
+  });
+  const listener = new SocketListener({ client, dispatcher, stateFile: testStateFile() });
+  t.after(() => listener.stop());
+  listener.running = true;
+
+  await listener.catchUpDirectMessages("100.000000", undefined);
+
+  assert.equal(dispatcher.calls.length, 0, "D2 must not be read past a failed D1");
+  assert.notEqual(listener.apiFailureStreakSince, null);
+});
+
+test("start fails when Slack refuses the token instead of running without a user id", async (t) => {
+  installFakeWebSocket(t);
+  const client = makeFakeClient();
+  client.authTest = async () => {
+    throw new Error("Slack API error (auth.test): invalid_auth");
+  };
+  const listener = new SocketListener({
+    client,
+    dispatcher: makeFakeDispatcher(),
+    stateFile: testStateFile(),
+  });
+  t.after(() => listener.stop());
+
+  await assert.rejects(listener.start(), /invalid_auth/);
 });

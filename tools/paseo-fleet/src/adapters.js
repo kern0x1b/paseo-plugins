@@ -5,41 +5,32 @@ export function resolveAdapters(config) {
   return config.adapters || DEFAULT_ADAPTERS;
 }
 
-function runQuietly(adapter, args) {
+function runAdapter(adapter, args) {
   try {
-    execFileSync(adapter, args, { stdio: 'ignore' });
-    return true;
-  } catch {
-    return false;
+    execFileSync(adapter, args, { stdio: ['ignore', 'ignore', 'pipe'] });
+  } catch (err) {
+    const stderr = err.stderr ? String(err.stderr).trim() : '';
+    throw new Error(`${adapter} ${args.join(' ')} failed: ${stderr || err.message}`);
   }
 }
 
 export function bindCoordinator(adapter, agentId) {
-  return runQuietly(adapter, ['set-coordinator', agentId]);
+  runAdapter(adapter, ['set-coordinator', agentId]);
 }
 
 export function unbindCoordinator(adapter) {
-  return runQuietly(adapter, ['unset-coordinator']);
+  runAdapter(adapter, ['unset-coordinator']);
 }
 
 export function readRouterStatus(adapter, { paseoBin = 'paseo', run = execFileSync } = {}) {
-  try {
-    const plugins = JSON.parse(
-      run(paseoBin, ['plugin', 'ls', '--json'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }),
-    );
-    const plugin = plugins.find((entry) => entry.id === adapter);
-    if (!plugin) return { installed: false, running: false, status: 'not installed' };
-    return { installed: true, running: plugin.status === 'running', status: plugin.status };
-  } catch {
-    return { installed: false, running: false, status: 'unknown (paseo plugin ls failed)' };
-  }
+  const plugins = JSON.parse(
+    run(paseoBin, ['plugin', 'ls', '--json'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] }),
+  );
+  const plugin = plugins.find((entry) => entry.id === adapter);
+  if (!plugin) return { installed: false, running: false, status: 'not installed' };
+  return { installed: true, running: plugin.status === 'running', status: plugin.status };
 }
 
 export function enableRouter(adapter, { paseoBin = 'paseo', run = execFileSync } = {}) {
-  try {
-    run(paseoBin, ['plugin', 'enable', adapter], { stdio: 'ignore' });
-    return true;
-  } catch {
-    return false;
-  }
+  run(paseoBin, ['plugin', 'enable', adapter], { stdio: ['ignore', 'ignore', 'inherit'] });
 }

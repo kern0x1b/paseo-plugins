@@ -173,7 +173,7 @@ describe("uploadApiPath", () => {
     assert.equal(called, false);
   });
 
-  it("turns image bytes into a data URL whatever the content type, and anything else into null", async () => {
+  it("turns image bytes into a data URL whatever the content type, anything else into null, and fails on an HTTP error", async () => {
     const src = "/-/project/1/uploads/0123456789abcdef/a.png";
     const reply = (body: Uint8Array | string, init?: ResponseInit) =>
       (async () => new Response(body as BodyInit, init)) as unknown as typeof fetch;
@@ -195,7 +195,10 @@ describe("uploadApiPath", () => {
       ),
       null,
     );
-    assert.equal(await fetchImage({ host: HOST, token: "t" }, src, reply("{}", { status: 404 })), null);
+    await assert.rejects(
+      fetchImage({ host: HOST, token: "t" }, src, reply("{}", { status: 404 })),
+      /GitLab returned 404/,
+    );
   });
 });
 

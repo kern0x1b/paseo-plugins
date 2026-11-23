@@ -58,7 +58,14 @@ export function keychainStore(run: SecurityRun = runSecurity): SecretStore {
         KEYCHAIN_SERVICE,
         "-w",
       ]);
-      return code === 0 ? stdout.trim() || null : null;
+      // security exits with 44 when the Keychain holds no such item.
+      if (code === 44) {
+        return null;
+      }
+      if (code !== 0) {
+        throw new Error(`Could not read the token from the Keychain (security exited with ${code}).`);
+      }
+      return stdout.trim() || null;
     },
     async write(account, secret) {
       assertSafe(account, "host");
@@ -83,8 +90,11 @@ export function fileStore(directory: string = stateDir()): SecretStore {
     async read(account) {
       try {
         return readFileSync(fileFor(account), "utf8").trim() || null;
-      } catch {
-        return null;
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+          return null;
+        }
+        throw err;
       }
     },
     async write(account, secret) {

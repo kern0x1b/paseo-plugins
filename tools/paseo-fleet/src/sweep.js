@@ -73,12 +73,15 @@ export async function runSweep({ adapters = DEFAULT_ADAPTERS, since, snapshotRun
   const errors = [];
   const items = [];
   for (const result of results) {
+    if (!result.error && !Array.isArray(result.snapshot?.items)) {
+      result.error = 'snapshot has no items array';
+    }
     if (result.error) {
       sources.push({ adapter: result.adapter, ok: false, items: 0 });
       errors.push({ source: result.adapter, error: result.error });
       continue;
     }
-    const snapshotItems = Array.isArray(result.snapshot?.items) ? result.snapshot.items : [];
+    const snapshotItems = result.snapshot.items;
     sources.push({
       adapter: result.adapter,
       ok: true,

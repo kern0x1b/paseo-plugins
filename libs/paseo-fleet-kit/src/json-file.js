@@ -1,12 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
 
-export function readJsonFile(filePath, fallback) {
-  if (!fs.existsSync(filePath)) return fallback;
+export function readJsonFile(filePath, valueWhenMissing) {
+  if (!fs.existsSync(filePath)) return valueWhenMissing;
+  const content = fs.readFileSync(filePath, "utf8");
   try {
-    return JSON.parse(fs.readFileSync(filePath, "utf8"));
-  } catch {
-    return fallback;
+    return JSON.parse(content);
+  } catch (err) {
+    throw new Error(`${filePath} is not valid JSON: ${err.message}`);
   }
 }
 
@@ -16,7 +17,5 @@ export function writeJsonFile(filePath, data) {
 }
 
 export function removeFile(filePath) {
-  try {
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-  } catch {}
+  fs.rmSync(filePath, { force: true });
 }

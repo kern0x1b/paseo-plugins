@@ -380,18 +380,17 @@ async function main() {
 
         if (subCmd === "status") {
           if (fs.existsSync(stateFile)) {
-            try {
-              const state = JSON.parse(fs.readFileSync(stateFile, "utf8"));
-              if (state.pid) {
-                try {
-                  process.kill(state.pid, 0);
-                  console.log(JSON.stringify(state, null, 2));
-                  break;
-                } catch {
-                  fs.unlinkSync(stateFile);
-                }
+            const state = JSON.parse(fs.readFileSync(stateFile, "utf8"));
+            if (state.pid) {
+              try {
+                process.kill(state.pid, 0);
+                console.log(JSON.stringify(state, null, 2));
+                break;
+              } catch (err) {
+                if (err.code !== "ESRCH") throw err;
+                fs.unlinkSync(stateFile);
               }
-            } catch {}
+            }
           }
           console.log(
             JSON.stringify({ running: false, activeSubscriptions: registry.list().length }, null, 2),
@@ -401,16 +400,12 @@ async function main() {
 
         if (subCmd === "stop") {
           if (fs.existsSync(stateFile)) {
-            try {
-              const state = JSON.parse(fs.readFileSync(stateFile, "utf8"));
-              if (state.pid) {
-                process.kill(state.pid, "SIGTERM");
-                fs.unlinkSync(stateFile);
-                console.log(`Stopped GitLab daemon PID ${state.pid}`);
-                break;
-              }
-            } catch (err) {
-              console.error(`Failed to stop daemon: ${err.message}`);
+            const state = JSON.parse(fs.readFileSync(stateFile, "utf8"));
+            if (state.pid) {
+              process.kill(state.pid, "SIGTERM");
+              fs.unlinkSync(stateFile);
+              console.log(`Stopped GitLab daemon PID ${state.pid}`);
+              break;
             }
           }
           console.log("No active daemon was running.");

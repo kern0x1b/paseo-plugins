@@ -1,5 +1,6 @@
 import { usePaseo } from "@getpaseo/plugin/client";
 import { useQuery } from "@tanstack/react-query";
+import { readLocalStore, writeLocalStore } from "../local-store";
 
 export interface WorkspaceAgent {
   id: string;
@@ -29,11 +30,7 @@ export function useWorkspaceAgents(workspaceId: string, enabled = true) {
 }
 
 function preferences(): Record<string, string> {
-  try {
-    return JSON.parse(globalThis.localStorage?.getItem(PREFERRED_KEY) ?? "{}") as Record<string, string>;
-  } catch {
-    return {};
-  }
+  return readLocalStore<Record<string, string>>(PREFERRED_KEY) ?? {};
 }
 
 export function preferredAgent(
@@ -45,10 +42,5 @@ export function preferredAgent(
 }
 
 export function rememberAgent(workspaceId: string, agentId: string): void {
-  try {
-    globalThis.localStorage?.setItem(
-      PREFERRED_KEY,
-      JSON.stringify({ ...preferences(), [workspaceId]: agentId }),
-    );
-  } catch {}
+  writeLocalStore(PREFERRED_KEY, { ...preferences(), [workspaceId]: agentId });
 }

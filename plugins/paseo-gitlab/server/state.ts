@@ -17,24 +17,41 @@ interface Accounts {
   active: string | null;
 }
 
-export function readAccounts(): Accounts {
+function readStateJson(path: string): unknown {
+  let content: string;
   try {
-    const parsed = JSON.parse(readFileSync(configFile(), "utf8")) as {
-      host?: unknown;
-      hosts?: unknown;
-      active?: unknown;
-    };
-    const hosts = Array.isArray(parsed.hosts)
-      ? parsed.hosts.filter((host): host is string => typeof host === "string")
-      : typeof parsed.host === "string"
-        ? [parsed.host]
-        : [];
-    const active =
-      typeof parsed.active === "string" && hosts.includes(parsed.active) ? parsed.active : (hosts[0] ?? null);
-    return { hosts, active };
-  } catch {
+    content = readFileSync(path, "utf8");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+      return undefined;
+    }
+    throw err;
+  }
+  try {
+    return JSON.parse(content);
+  } catch (err) {
+    throw new Error(`${path} is not valid JSON: ${(err as Error).message}`);
+  }
+}
+
+export function readAccounts(): Accounts {
+  const content = readStateJson(configFile());
+  if (content === undefined) {
     return { hosts: [], active: null };
   }
+  const parsed = content as {
+    host?: unknown;
+    hosts?: unknown;
+    active?: unknown;
+  };
+  const hosts = Array.isArray(parsed.hosts)
+    ? parsed.hosts.filter((host): host is string => typeof host === "string")
+    : typeof parsed.host === "string"
+      ? [parsed.host]
+      : [];
+  const active =
+    typeof parsed.active === "string" && hosts.includes(parsed.active) ? parsed.active : (hosts[0] ?? null);
+  return { hosts, active };
 }
 
 function writeAccounts(accounts: Accounts): void {
@@ -76,12 +93,15 @@ function queriesFile(): string {
 }
 
 export function readSavedQueries<T>(): T[] {
-  try {
-    const parsed = JSON.parse(readFileSync(queriesFile(), "utf8")) as { queries?: unknown };
-    return Array.isArray(parsed.queries) ? (parsed.queries as T[]) : [];
-  } catch {
+  const content = readStateJson(queriesFile());
+  if (content === undefined) {
     return [];
   }
+  const parsed = content as { queries?: unknown };
+  if (!Array.isArray(parsed.queries)) {
+    throw new Error(`${queriesFile()} has no queries list.`);
+  }
+  return parsed.queries as T[];
 }
 
 export function writeSavedQueries<T>(queries: T[]): void {

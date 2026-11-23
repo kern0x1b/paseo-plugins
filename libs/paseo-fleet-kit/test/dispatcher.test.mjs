@@ -169,9 +169,14 @@ describe("BaseEventDispatcher agent status", () => {
     assert.equal(await dispatcher.isAgentInactive("agent-gone"), true);
   });
 
-  it("keeps the subscriptions when Paseo itself fails, whatever the error text says", async () => {
+  it("fails loudly when Paseo itself fails, and keeps the subscriptions", async () => {
     const paseo = createFakePaseo({ broken: true });
-    const dispatcher = new TestDispatcher({ registry: registryWith(), config: { paseoBin: paseo.bin } });
-    assert.equal(await dispatcher.isAgentInactive("agent-c"), false);
+    const registry = registryWith();
+    const dispatcher = new TestDispatcher({ registry, config: { paseoBin: paseo.bin } });
+    await assert.rejects(dispatcher.isAgentInactive("agent-c"), /paseo inspect agent-c failed/);
+    const delivery = await dispatcher.sendToPaseo("agent-c", "hello");
+    assert.equal(delivery.success, false);
+    assert.equal(delivery.inactive, undefined);
+    assert.match(delivery.error, /paseo inspect agent-c failed/);
   });
 });
