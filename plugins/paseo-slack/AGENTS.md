@@ -23,7 +23,7 @@ deterministic filtering and dual-route event dispatching.
 | `server/router/index.js`           | Package root export surface.                                                                   |
 | `server/router/mcp.js`             | Model Context Protocol (MCP) stdio server exposing Slack tools to AI agents.                   |
 | `server/router/slack-client.js`    | Slack Web API client supporting 200+ endpoints via native `fetch`.                             |
-| `server/router/socket-listener.js` | Real-time WebSocket connection (Socket Mode / user session) and smart polling fallback.        |
+| `server/router/socket-listener.js` | Real-time WebSocket connection (Socket Mode / user session), reconnect and DM catch-up.        |
 | `server/router/subscriptions.js`   | Fleet subscription registry matching inbound messages to agents.                               |
 | `test/`                            | Automated test suite run via `node --test test/`.                                              |
 | `docs/`                            | Comprehensive references for CLI commands, the plugin event router, and Slack Web API methods. |

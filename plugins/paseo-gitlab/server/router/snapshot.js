@@ -88,7 +88,8 @@ export class GitLabSnapshot {
   async fetchList(source, fetcher) {
     try {
       const list = await fetcher();
-      return Array.isArray(list) ? list : [];
+      if (!Array.isArray(list)) throw new Error(`${source} did not return a list`);
+      return list;
     } catch (err) {
       this.errors.push({ source, error: err.message });
       return [];

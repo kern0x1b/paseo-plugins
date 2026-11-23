@@ -122,16 +122,16 @@ async function main() {
 
         const config = loadConfig();
         for (const adapter of resolveAdapters(config)) {
-          if (bindCoordinator(adapter, id)) {
-            console.log(`Bound ${adapter} to the coordinator.`);
-          }
+          bindCoordinator(adapter, id);
+          console.log(`Bound ${adapter} to the coordinator.`);
           const status = readRouterStatus(adapter);
           if (status.running) {
             console.log(`${adapter} plugin is running inside Paseo.`);
-          } else if (status.installed && enableRouter(adapter)) {
+          } else if (status.installed) {
+            enableRouter(adapter);
             console.log(`Enabled the ${adapter} plugin.`);
           } else {
-            console.error(`The ${adapter} plugin is ${status.status}: install it with 'paseo plugin add'.`);
+            throw new Error(`The ${adapter} plugin is ${status.status}: install it with 'paseo plugin add'.`);
           }
         }
 
@@ -184,9 +184,8 @@ async function main() {
           console.log(`Coordinator agent ID set to: ${id}`);
 
           for (const adapter of resolveAdapters(loadConfig())) {
-            if (bindCoordinator(adapter, id)) {
-              console.log(`Bound ${adapter} to the coordinator.`);
-            }
+            bindCoordinator(adapter, id);
+            console.log(`Bound ${adapter} to the coordinator.`);
           }
         } else if (sub === 'clear') {
           saveConfig({ coordinatorAgentId: null });

@@ -18,6 +18,15 @@ export function getChannelsPath() {
   return CHANNELS_FILE;
 }
 
+function readJson(filePath) {
+  const content = fs.readFileSync(filePath, 'utf8');
+  try {
+    return JSON.parse(content);
+  } catch (err) {
+    throw new Error(`${filePath} is not valid JSON: ${err.message}`);
+  }
+}
+
 export function ensureFleetDir() {
   if (!fs.existsSync(FLEET_DIR)) {
     fs.mkdirSync(FLEET_DIR, { recursive: true });
@@ -26,13 +35,7 @@ export function ensureFleetDir() {
 
 export function loadConfig() {
   ensureFleetDir();
-  if (fs.existsSync(CONFIG_FILE)) {
-    try {
-      return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
-    } catch {
-      return {};
-    }
-  }
+  if (fs.existsSync(CONFIG_FILE)) return readJson(CONFIG_FILE);
   return {};
 }
 
@@ -46,13 +49,7 @@ export function saveConfig(updates) {
 
 export function loadChannels() {
   ensureFleetDir();
-  if (fs.existsSync(CHANNELS_FILE)) {
-    try {
-      return JSON.parse(fs.readFileSync(CHANNELS_FILE, 'utf8'));
-    } catch {
-      return { version: '1.0', channels: {} };
-    }
-  }
+  if (fs.existsSync(CHANNELS_FILE)) return readJson(CHANNELS_FILE);
   return { version: '1.0', channels: {} };
 }
 

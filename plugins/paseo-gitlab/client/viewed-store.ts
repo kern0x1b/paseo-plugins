@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { readLocalStore, writeLocalStore } from "./local-store";
 
 const VIEWED_KEY = "paseo-gitlab:viewed";
 const REVIEWED_KEY = "paseo-gitlab:reviewed-at";
@@ -6,21 +7,14 @@ const EMPTY: Record<string, string> = {};
 const listeners = new Set<() => void>();
 
 function load<T>(key: string): Record<string, T> {
-  try {
-    const raw = globalThis.localStorage?.getItem(key);
-    return raw ? (JSON.parse(raw) as Record<string, T>) : {};
-  } catch {
-    return {};
-  }
+  return readLocalStore<Record<string, T>>(key) ?? {};
 }
 
 let viewed: Record<string, Record<string, string>> = load(VIEWED_KEY);
 let reviewedAt: Record<string, string> = load(REVIEWED_KEY);
 
 function persist(key: string, value: unknown): void {
-  try {
-    globalThis.localStorage?.setItem(key, JSON.stringify(value));
-  } catch {}
+  writeLocalStore(key, value);
   for (const listener of listeners) {
     listener();
   }

@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import type { ItemRef } from "../shared/contract";
+import { readLocalStore, writeLocalStore } from "./local-store";
 
 const STORAGE_KEY = "paseo-gitlab:diff-targets";
 
@@ -7,19 +8,12 @@ const listeners = new Set<() => void>();
 let targets: Record<string, ItemRef> = load();
 
 function load(): Record<string, ItemRef> {
-  try {
-    const raw = globalThis.localStorage?.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as Record<string, ItemRef>) : {};
-  } catch {
-    return {};
-  }
+  return readLocalStore<Record<string, ItemRef>>(STORAGE_KEY) ?? {};
 }
 
 export function setDiffTarget(workspaceId: string, target: ItemRef): void {
   targets = { ...targets, [workspaceId]: target };
-  try {
-    globalThis.localStorage?.setItem(STORAGE_KEY, JSON.stringify(targets));
-  } catch {}
+  writeLocalStore(STORAGE_KEY, targets);
   for (const listener of listeners) {
     listener();
   }

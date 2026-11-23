@@ -1194,16 +1194,12 @@ export function createHandlers(deps: AuthDeps) {
       if (detail.kind !== "mr" || !detail.pipelineIid) {
         return [];
       }
-      const pipeline = await handlers
-        .pipeline({ projectPath: detail.projectPath, iid: detail.pipelineIid })
-        .catch(() => null);
+      const pipeline = await handlers.pipeline({ projectPath: detail.projectPath, iid: detail.pipelineIid });
       return Promise.all(
         failedJobsOf(pipeline).map(async (job) => ({
           name: job.name,
           stage: job.stage,
-          log: await handlers
-            .jobLog({ projectPath: detail.projectPath, jobId: job.id })
-            .catch(() => ({ lines: [], totalLines: 0 })),
+          log: await handlers.jobLog({ projectPath: detail.projectPath, jobId: job.id }),
         })),
       );
     },
@@ -1241,7 +1237,7 @@ export function createHandlers(deps: AuthDeps) {
       const [log, pipeline] = await Promise.all([
         handlers.jobLog({ projectPath: job.projectPath, jobId: job.jobId }),
         job.pipelineIid
-          ? handlers.pipeline({ projectPath: job.projectPath, iid: job.pipelineIid }).catch(() => null)
+          ? handlers.pipeline({ projectPath: job.projectPath, iid: job.pipelineIid })
           : Promise.resolve(null),
       ]);
       return { title: `Fix ${job.name}`.slice(0, 120), text: jobPrompt(job.name, job.webUrl, pipeline, log) };
@@ -1294,19 +1290,17 @@ export function createHandlers(deps: AuthDeps) {
       const unique = [
         ...new Map(refs.map((ref) => [`${ref.kind}:${ref.projectPath}:${ref.iid}`, ref])).values(),
       ].slice(0, 8);
-      const details = await Promise.all(unique.map((ref) => handlers.detail(ref).catch(() => null)));
+      const details = await Promise.all(unique.map((ref) => handlers.detail(ref)));
       return {
-        items: details
-          .filter((detail): detail is Detail => detail !== null)
-          .map((detail) => ({
-            id: `${detail.kind}:${detail.projectPath}:${detail.iid}`,
-            identifier: detail.reference.replace(/^.*\//, ""),
-            title: detail.title,
-            subtitle: `${detail.kind === "mr" ? "Merge request" : "Issue"} · ${detail.state}`,
-            url: detail.webUrl,
-            text: itemContext(detail, []),
-            resourceType: detail.kind === "mr" ? "gitlab-merge-request" : "gitlab-issue",
-          })),
+        items: details.map((detail) => ({
+          id: `${detail.kind}:${detail.projectPath}:${detail.iid}`,
+          identifier: detail.reference.replace(/^.*\//, ""),
+          title: detail.title,
+          subtitle: `${detail.kind === "mr" ? "Merge request" : "Issue"} · ${detail.state}`,
+          url: detail.webUrl,
+          text: itemContext(detail, []),
+          resourceType: detail.kind === "mr" ? "gitlab-merge-request" : "gitlab-issue",
+        })),
       };
     },
   };

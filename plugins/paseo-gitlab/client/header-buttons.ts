@@ -85,7 +85,9 @@ export function startHeaderButtons(client: PluginClientContext, icon: string): P
     try {
       const status = await client.rpc(authStatusRpc, {});
       applyBadge(badgeFor(status.connected ? await client.rpc(listsRpc, {}) : null));
-    } catch {}
+    } catch (error) {
+      console.error("[paseo-gitlab] Could not refresh the header badge:", error);
+    }
   }
 
   const unsubscribe = client.paseo.workspaces.subscribe((update) => {

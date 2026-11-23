@@ -298,32 +298,28 @@ export class GitLabDaemon {
 
     await this.refreshRelevantItems();
 
-    try {
-      const initialTodos = await this.client.getTodos({ perPage: 30 });
-      for (const t of initialTodos) {
-        if (this.happenedBeforeResume(t.created_at)) this.seenTodoIds.add(t.id);
-      }
-
-      const initialEvents = await this.client.getProjectEvents({ perPage: EVENTS_PAGE_SIZE });
-      for (const e of initialEvents) {
-        if (this.happenedBeforeResume(e.created_at)) this.seenEventIds.add(e.id);
-      }
-
-      const initialPipelines = await this.client.getPipelines({
-        username: this.currentUser?.username || undefined,
-        perPage: 20,
-      });
-      for (const p of initialPipelines) {
-        this.pipelineStatuses.set(p.id, p.status);
-      }
-      this.pipelinesBaselined = true;
-
-      log(
-        `[GitLab Daemon] Initialized state: ${this.seenTodoIds.size} todos, ${this.seenEventIds.size} events, ${this.pipelineStatuses.size} pipelines cached.`,
-      );
-    } catch (err) {
-      logWarn(`[GitLab Daemon] Warning during state initialization: ${err.message}`);
+    const initialTodos = await this.client.getTodos({ perPage: 30 });
+    for (const t of initialTodos) {
+      if (this.happenedBeforeResume(t.created_at)) this.seenTodoIds.add(t.id);
     }
+
+    const initialEvents = await this.client.getProjectEvents({ perPage: EVENTS_PAGE_SIZE });
+    for (const e of initialEvents) {
+      if (this.happenedBeforeResume(e.created_at)) this.seenEventIds.add(e.id);
+    }
+
+    const initialPipelines = await this.client.getPipelines({
+      username: this.currentUser?.username || undefined,
+      perPage: 20,
+    });
+    for (const p of initialPipelines) {
+      this.pipelineStatuses.set(p.id, p.status);
+    }
+    this.pipelinesBaselined = true;
+
+    log(
+      `[GitLab Daemon] Initialized state: ${this.seenTodoIds.size} todos, ${this.seenEventIds.size} events, ${this.pipelineStatuses.size} pipelines cached.`,
+    );
   }
 
   async checkTodos() {

@@ -28,16 +28,14 @@ export class BaseEventDispatcher {
 
   async inspectAgent(agentId) {
     const paseoBin = this.config.paseoBin || "paseo";
+    let stdout;
     try {
-      const { stdout } = await execFileAsync(paseoBin, ["inspect", agentId, "--json"]);
-      return JSON.parse(stdout).Archived ? "inactive" : "active";
+      ({ stdout } = await execFileAsync(paseoBin, ["inspect", agentId, "--json"]));
     } catch (err) {
-      try {
-        return JSON.parse(err.stdout || "").error?.code === "AGENT_NOT_FOUND" ? "inactive" : "unknown";
-      } catch {
-        return "unknown";
-      }
+      if (/"code"\s*:\s*"AGENT_NOT_FOUND"/.test(err.stdout || "")) return "inactive";
+      throw new Error(`paseo inspect ${agentId} failed: ${err.message}`);
     }
+    return JSON.parse(stdout).Archived ? "inactive" : "active";
   }
 
   async isAgentInactive(agentId) {
@@ -47,9 +45,7 @@ export class BaseEventDispatcher {
       return cached.status === "inactive";
     }
     const status = await this.inspectAgent(agentId);
-    if (status !== "unknown") {
-      this.agentStatusCache.set(agentId, { status, at: Date.now() });
-    }
+    this.agentStatusCache.set(agentId, { status, at: Date.now() });
     return status === "inactive";
   }
 
@@ -69,9 +65,13 @@ export class BaseEventDispatcher {
 
   async sendToPaseo(agentId, text) {
     const paseoBin = this.config.paseoBin || "paseo";
-    if (await this.isAgentInactive(agentId)) {
-      this.releaseInactiveAgent(agentId);
-      return { success: false, inactive: true, error: `agent ${agentId} is archived or gone` };
+    try {
+      if (await this.isAgentInactive(agentId)) {
+        this.releaseInactiveAgent(agentId);
+        return { success: false, inactive: true, error: `agent ${agentId} is archived or gone` };
+      }
+    } catch (err) {
+      return { success: false, error: err.message };
     }
     try {
       const { stdout, stderr } = await execFileAsync(paseoBin, ["send", agentId, text, "--no-wait"]);

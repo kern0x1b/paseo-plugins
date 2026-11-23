@@ -34,6 +34,7 @@ import { ItemDetail, type Ui } from "./detail";
 import { STATUS_KEY } from "./queries";
 import { useStyles } from "./styles";
 import { workspaceKey } from "./workspace-card";
+import { readLocalStore, writeLocalStore } from "../local-store";
 
 const COLUMN_WIDTH = 300;
 const COLLAPSED_WIDTH = 44;
@@ -49,17 +50,11 @@ const BOARD_COLLAPSED_KEY = "paseo-gitlab:board-collapsed";
 type DragPayload = { id: string; iid: string; projectPath: string; fromColumnId: string };
 
 function readStore<T>(key: string): Record<string, T> {
-  try {
-    return JSON.parse(globalThis.localStorage?.getItem(key) ?? "{}") as Record<string, T>;
-  } catch {
-    return {};
-  }
+  return readLocalStore<Record<string, T>>(key) ?? {};
 }
 
 function writeStore<T>(key: string, id: string, value: T): void {
-  try {
-    globalThis.localStorage?.setItem(key, JSON.stringify({ ...readStore<T>(key), [id]: value }));
-  } catch {}
+  writeLocalStore(key, { ...readStore<T>(key), [id]: value });
 }
 
 function boardKey(...parts: string[]) {
@@ -606,9 +601,7 @@ function Column({
         return;
       }
       event.preventDefault();
-      try {
-        dropRef.current(JSON.parse(raw) as DragPayload, column, cardUnder(event), lastRef.current);
-      } catch {}
+      dropRef.current(JSON.parse(raw) as DragPayload, column, cardUnder(event), lastRef.current);
     };
     node.addEventListener("dragover", onOver);
     node.addEventListener("dragleave", onLeave);

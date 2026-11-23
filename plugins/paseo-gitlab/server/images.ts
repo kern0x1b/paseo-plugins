@@ -56,21 +56,17 @@ export async function fetchImage(
   if (!path) {
     return null;
   }
-  try {
-    const response = await fetchImpl(`${connection.host}/api/v4${path}`, {
-      headers: { Authorization: `Bearer ${connection.token}` },
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    });
-    if (!response.ok) {
-      return null;
-    }
-    const bytes = Buffer.from(await response.arrayBuffer());
-    const type = imageTypeOf(bytes);
-    if (!type || bytes.length > MAX_IMAGE_BYTES) {
-      return null;
-    }
-    return `data:${type};base64,${bytes.toString("base64")}`;
-  } catch {
+  const response = await fetchImpl(`${connection.host}/api/v4${path}`, {
+    headers: { Authorization: `Bearer ${connection.token}` },
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  });
+  if (!response.ok) {
+    throw new Error(`GitLab returned ${response.status} for the image ${src}.`);
+  }
+  const bytes = Buffer.from(await response.arrayBuffer());
+  const type = imageTypeOf(bytes);
+  if (!type || bytes.length > MAX_IMAGE_BYTES) {
     return null;
   }
+  return `data:${type};base64,${bytes.toString("base64")}`;
 }

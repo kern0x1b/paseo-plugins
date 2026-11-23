@@ -40,6 +40,7 @@ import { buildTree, type TreeNode } from "./tree";
 import { useStyles, type Styles } from "./styles";
 import { workspaceKey } from "./workspace-card";
 import { preferredAgent, useWorkspaceAgents } from "./workspace-agents";
+import { readLocalStore, writeLocalStore } from "../local-store";
 
 const TREE_WIDTH = { initial: 300, min: 180, max: 640 };
 const TREE_WIDTH_KEY = "paseo-gitlab:tree-width";
@@ -514,15 +515,9 @@ function versionsKey(target: ItemRef) {
 const VIEW_KEY = "paseo-gitlab:diff-view";
 
 function storedView(): DiffView {
-  try {
-    const raw = globalThis.localStorage?.getItem(VIEW_KEY);
-    if (raw) {
-      return JSON.parse(raw) as DiffView;
-    }
-    return { wrap: globalThis.localStorage?.getItem(WRAP_KEY) === "true" };
-  } catch {
-    return {};
-  }
+  return (
+    readLocalStore<DiffView>(VIEW_KEY) ?? { wrap: globalThis.localStorage?.getItem(WRAP_KEY) === "true" }
+  );
 }
 
 const SHORTCUTS: [string, string][] = [
@@ -713,17 +708,13 @@ function ReviewDiff({ target, ui, onPickOther }: { target: ItemRef; ui: Ui; onPi
   const [view, setViewState] = useState<DiffView>(storedView);
   const setView = (next: DiffView) => {
     setViewState(next);
-    try {
-      globalThis.localStorage?.setItem(VIEW_KEY, JSON.stringify(next));
-    } catch {}
+    writeLocalStore(VIEW_KEY, next);
   };
   const [treeWidth, setTreeWidthState] = useState(storedTreeWidth);
   const setTreeWidth = useMemo(
     () => (next: number) => {
       setTreeWidthState(next);
-      try {
-        globalThis.localStorage?.setItem(TREE_WIDTH_KEY, String(Math.round(next)));
-      } catch {}
+      globalThis.localStorage?.setItem(TREE_WIDTH_KEY, String(Math.round(next)));
     },
     [],
   );

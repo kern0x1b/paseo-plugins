@@ -23,7 +23,7 @@ import {
 | `BaseSubscriptionRegistry`                      | Subscription file with coordinator ID, `addSubscription`, `removeSubscriptions`. You add `add`, `remove` and `findMatchingAgent` for your platform. |
 | `BaseEventDispatcher`                           | The routing flow: filter, subscription first, then Coordinator, then unrouted. You implement `shouldProcess`, `buildPrompt`, `buildEnvelope`.       |
 | `createDaemonStateStore`                        | `daemon-state.json` read, write, clear and the "is this pid really our daemon" check.                                                               |
-| `readJsonFile`, `writeJsonFile`, `removeFile`   | Small file helpers that create directories and tolerate corrupt JSON.                                                                               |
+| `readJsonFile`, `writeJsonFile`, `removeFile`   | Small file helpers that create directories and refuse corrupt JSON.                                                                                 |
 | `paseo-fleet-kit/testing` → `useIsolatedHome()` | Point `HOME` at a temp directory so tests never touch real config.                                                                                  |
 
 ## A minimal adapter

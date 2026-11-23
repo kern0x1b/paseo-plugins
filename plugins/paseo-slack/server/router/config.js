@@ -12,11 +12,7 @@ export function getConfigPath() {
 export function loadConfig() {
   let fileConfig = {};
   if (fs.existsSync(CONFIG_FILE)) {
-    try {
-      fileConfig = JSON.parse(fs.readFileSync(CONFIG_FILE, "utf8"));
-    } catch {
-      fileConfig = {};
-    }
+    fileConfig = JSON.parse(fs.readFileSync(CONFIG_FILE, "utf8"));
   }
 
   return {

@@ -8,8 +8,10 @@ export function isPidAlive(pid) {
   try {
     process.kill(pid, 0);
     return true;
-  } catch {
-    return false;
+  } catch (err) {
+    if (err.code === "ESRCH") return false;
+    if (err.code === "EPERM") return true;
+    throw err;
   }
 }
 
@@ -20,8 +22,10 @@ export function getProcessCommand(pid) {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
     }).trim();
-  } catch {
-    return null;
+  } catch (err) {
+    // ps exits with status 1 when no process has that pid.
+    if (err.status === 1) return null;
+    throw err;
   }
 }
 
@@ -30,11 +34,7 @@ export function createDaemonStateStore({ routerName, processMarker }) {
 
   const readState = (stateFile = defaultStateFile) => readJsonFile(stateFile, null);
 
-  const saveState = (state, stateFile = defaultStateFile) => {
-    try {
-      writeJsonFile(stateFile, state);
-    } catch {}
-  };
+  const saveState = (state, stateFile = defaultStateFile) => writeJsonFile(stateFile, state);
 
   const clearState = (stateFile = defaultStateFile) => removeFile(stateFile);
 

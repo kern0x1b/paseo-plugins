@@ -8,38 +8,38 @@ import {
 
 const PING_INTERVAL_MS = 20000;
 const IDLE_TIMEOUT_MS = 60000;
-const MAX_CONNECT_ATTEMPTS = 5;
-const WS_RETRY_WHILE_POLLING_MS = 5 * 60 * 1000;
 const CHANNELS_CACHE_TTL_MS = 5 * 60 * 1000;
-const MAX_HISTORY_CALLS_PER_MINUTE = 40;
 const HISTORY_PAGE_SIZE = 100;
 const HEALTH_CHECK_INTERVAL_MS = 30 * 1000;
 const WS_DOWN_ALERT_THRESHOLD_MS = 2 * 60 * 1000;
 const API_FAILURE_ALERT_THRESHOLD_MS = 2 * 60 * 1000;
 
-const AUTH_REJECTED_POLL_INTERVAL_MS = 5 * 60 * 1000;
-const AUTH_REJECTED_ERRORS = ["invalid_auth", "token_revoked", "token_expired", "account_inactive", "not_authed"];
+const AUTH_REJECTED_RECONNECT_MS = 5 * 60 * 1000;
+const MAX_RECONNECT_DELAY_MS = 30000;
+const AUTH_REJECTED_ERRORS = [
+  "invalid_auth",
+  "token_revoked",
+  "token_expired",
+  "account_inactive",
+  "not_authed",
+];
 
 function isAuthRejected(message) {
   return AUTH_REJECTED_ERRORS.some((code) => String(message).includes(code));
 }
 
-const MODE = { CONNECTING: "connecting", SOCKET: "socket", POLLING: "polling" };
+const MODE = { CONNECTING: "connecting", SOCKET: "socket" };
 
 export class SocketListener {
   constructor({
     client = new SlackClient(),
     dispatcher = new EventDispatcher(),
-    maxConnectAttempts = MAX_CONNECT_ATTEMPTS,
-    wsRetryIntervalMs = WS_RETRY_WHILE_POLLING_MS,
     idleTimeoutMs = IDLE_TIMEOUT_MS,
     pingIntervalMs = PING_INTERVAL_MS,
     stateFile = DEFAULT_STATE_FILE,
   } = {}) {
     this.client = client;
     this.dispatcher = dispatcher;
-    this.maxConnectAttempts = maxConnectAttempts;
-    this.wsRetryIntervalMs = wsRetryIntervalMs;
     this.idleTimeoutMs = idleTimeoutMs;
     this.pingIntervalMs = pingIntervalMs;
     this.stateFile = stateFile;
@@ -52,23 +52,18 @@ export class SocketListener {
     this.wsReconnectDelay = 1000;
     this.wsReconnectTimer = null;
 
-    this.pollTimer = null;
-    this.pollingActive = false;
     this.pingTimer = null;
     this.watchdogTimer = null;
-    this.wsRetryTimer = null;
 
     this.lastCheckedTs = (Date.now() / 1000).toFixed(6);
     this.hadSocketBefore = false;
     this.channelsCache = null;
     this.channelsCacheAt = 0;
-    this.pollBackoffMs = 0;
 
     this.startedAt = null;
     this.lastEventAt = null;
     this.eventsDispatched = 0;
 
-    this.pollingIsFallback = false;
     this.wsDownSince = null;
     this.apiFailureStreakSince = null;
     this.alertActive = false;
@@ -114,13 +109,15 @@ export class SocketListener {
     this.running = true;
     this.startedAt = new Date().toISOString();
 
-    try {
-      const auth = await this.client.authTest();
-      this.dispatcher.setMyUserId(auth.user_id);
-      this.log(`Authenticated as ${auth.user} (${auth.user_id}) on team ${auth.team}`);
-    } catch (err) {
-      this.error(`Auth check failed: ${err.message}`);
+    if (!this.client.config.appToken && !this.client.config.xoxcToken && !this.client.config.xoxpToken) {
+      throw new Error(
+        "No Slack token configured: set appToken, xoxcToken + cookieD, or xoxpToken with `slack config`.",
+      );
     }
+
+    const auth = await this.client.authTest();
+    this.dispatcher.setMyUserId(auth.user_id);
+    this.log(`Authenticated as ${auth.user} (${auth.user_id}) on team ${auth.team}`);
 
     this.healthCheckTimer = setInterval(() => this.evaluateHealth(), HEALTH_CHECK_INTERVAL_MS);
 
@@ -128,15 +125,10 @@ export class SocketListener {
       this.log("Starting in Socket Mode (WebSocket)...");
       this.saveState();
       await this.startSocketMode();
-    } else if (this.client.config.xoxcToken) {
+    } else {
       this.log("No SLACK_APP_TOKEN found. Starting in User-Session WebSocket mode (rtm.connect)...");
       this.saveState();
       await this.connectUserSessionSocket();
-    } else {
-      this.mode = MODE.POLLING;
-      this.log("No websocket-capable auth found. Starting in Direct Smart Polling mode...");
-      this.saveState();
-      this.startSmartPolling();
     }
   }
 
@@ -233,8 +225,6 @@ export class SocketListener {
   }
 
   enterSocketMode() {
-    const wasPolling = this.mode === MODE.POLLING;
-
     this.wsAttempts = 0;
     this.wsReconnectDelay = 1000;
     if (this.wsReconnectTimer) {
@@ -242,49 +232,10 @@ export class SocketListener {
       this.wsReconnectTimer = null;
     }
     this.wsDownSince = null;
-    this.pollingIsFallback = false;
     this.apiFailureStreakSince = null;
     this.authRejected = false;
-
-    if (this.mode !== MODE.SOCKET) {
-      this.mode = MODE.SOCKET;
-      if (this.wsRetryTimer) {
-        clearInterval(this.wsRetryTimer);
-        this.wsRetryTimer = null;
-      }
-      this.stopPolling();
-      this.log(
-        wasPolling
-          ? "WebSocket confirmed (hello). Polling fallback stopped."
-          : "WebSocket confirmed (hello).",
-      );
-    }
-
-    this.saveState();
-    this.evaluateHealth();
-  }
-
-  enterPollingMode() {
-    if (this.mode === MODE.POLLING) return;
-    this.mode = MODE.POLLING;
-    this.pollingIsFallback = true;
-    this.error(
-      "Giving up on WebSocket after repeated failures before hello. Falling back to Direct Smart Polling mode, " +
-        "will keep retrying the WebSocket in the background.",
-    );
-    this.lastCheckedTs = (Date.now() / 1000).toFixed(6);
-    this.startSmartPolling();
-
-    if (!this.wsRetryTimer) {
-      this.wsRetryTimer = setInterval(() => {
-        if (!this.running || this.mode !== MODE.POLLING) return;
-        if (this.connecting || this.ws || this.wsReconnectTimer) return;
-        this.log("Retrying WebSocket connection while Direct Smart Polling fallback is active...");
-        this.wsAttempts = 0;
-        this.wsReconnectDelay = 1000;
-        this.connectUserSessionSocket();
-      }, this.wsRetryIntervalMs);
-    }
+    this.mode = MODE.SOCKET;
+    this.log("WebSocket confirmed (hello).");
 
     this.saveState();
     this.evaluateHealth();
@@ -298,7 +249,7 @@ export class SocketListener {
     const apiFailingMs = this.apiFailureStreakSince ? now - this.apiFailureStreakSince : 0;
     const wsDownTooLong = wsDownMs > WS_DOWN_ALERT_THRESHOLD_MS;
     const apiFailingTooLong = apiFailingMs > API_FAILURE_ALERT_THRESHOLD_MS;
-    const unhealthy = this.pollingIsFallback || wsDownTooLong || apiFailingTooLong;
+    const unhealthy = wsDownTooLong || apiFailingTooLong;
 
     if (this.alertInFlight) return;
     if (unhealthy && !this.alertActive) {
@@ -307,7 +258,6 @@ export class SocketListener {
         reasons.push(
           'Slack rejected the session token (invalid_auth) - refresh it with `slack config xoxcToken="xoxc-..." cookieD="xoxd-..."`',
         );
-      if (this.pollingIsFallback) reasons.push("running in Direct Smart Polling fallback");
       if (wsDownTooLong) reasons.push(`WebSocket has been down for ${Math.round(wsDownMs / 1000)}s`);
       if (apiFailingTooLong)
         reasons.push(`Slack API calls have been failing for ${Math.round(apiFailingMs / 1000)}s`);
@@ -338,19 +288,15 @@ export class SocketListener {
   registerWsFailureBeforeHello(reason, retryAfter) {
     this.wsAttempts += 1;
     if (isAuthRejected(reason)) this.authRejected = true;
-    const backoffMs = retryAfter ? Math.max(this.wsReconnectDelay, retryAfter * 1000) : this.wsReconnectDelay;
+    let backoffMs = retryAfter ? Math.max(this.wsReconnectDelay, retryAfter * 1000) : this.wsReconnectDelay;
+    if (this.authRejected) backoffMs = AUTH_REJECTED_RECONNECT_MS;
     this.error(
-      `Failed to establish user-session WebSocket (attempt ${this.wsAttempts}/${this.maxConnectAttempts}): ${reason}`,
+      `Failed to establish user-session WebSocket (attempt ${this.wsAttempts}), retrying in ${backoffMs}ms: ${reason}`,
     );
-
-    if (this.wsAttempts >= this.maxConnectAttempts) {
-      this.enterPollingMode();
-      return;
-    }
 
     if (this.running) {
       this.scheduleReconnect(backoffMs);
-      this.wsReconnectDelay = Math.min(this.wsReconnectDelay * 2, 30000);
+      this.wsReconnectDelay = Math.min(this.wsReconnectDelay * 2, MAX_RECONNECT_DELAY_MS);
     }
   }
 
@@ -376,7 +322,7 @@ export class SocketListener {
 
       this.warn(`User-session WebSocket closed. Reconnecting in ${this.wsReconnectDelay}ms...`);
       this.scheduleReconnect(this.wsReconnectDelay);
-      this.wsReconnectDelay = Math.min(this.wsReconnectDelay * 2, 30000);
+      this.wsReconnectDelay = Math.min(this.wsReconnectDelay * 2, MAX_RECONNECT_DELAY_MS);
     };
 
     try {
@@ -514,7 +460,7 @@ export class SocketListener {
     return this.channelsCache;
   }
 
-  async pollDirectMessages(oldest, label, latest = undefined) {
+  async fetchMissedDirectMessages(oldest, label, latest = undefined) {
     const channels = await this.getCachedImChannels();
     let newestTs = oldest;
 
@@ -540,7 +486,7 @@ export class SocketListener {
           }
         }
       } catch (err) {
-        if (err.retryAfter) throw err;
+        throw new Error(`Reading DM history of ${ch.id} failed: ${err.message}`, { cause: err });
       }
     }
 
@@ -550,64 +496,11 @@ export class SocketListener {
 
   async catchUpDirectMessages(oldest, latest) {
     try {
-      await this.pollDirectMessages(oldest, "Missed DM", latest);
+      await this.fetchMissedDirectMessages(oldest, "Missed DM", latest);
     } catch (err) {
-      this.error(`Catch-up after reconnect failed: ${err.message}`);
+      if (!this.apiFailureStreakSince) this.apiFailureStreakSince = Date.now();
+      this.error(`Catch-up of DMs missed while the socket was down failed: ${err.message}`);
     }
-  }
-
-  stopPolling() {
-    this.pollingActive = false;
-    if (this.pollTimer) {
-      clearTimeout(this.pollTimer);
-      this.pollTimer = null;
-    }
-  }
-
-  startSmartPolling(baseIntervalMs = 3000) {
-    if (this.pollingActive) return;
-    this.pollingActive = true;
-
-    const tick = async () => {
-      if (!this.running || !this.pollingActive) return;
-
-      let delay = baseIntervalMs;
-
-      try {
-        const channelCount = await this.pollDirectMessages(this.lastCheckedTs, "Polled DM");
-
-        const minIntervalForBudget = Math.ceil(channelCount * (60000 / MAX_HISTORY_CALLS_PER_MINUTE));
-        delay = Math.max(baseIntervalMs, minIntervalForBudget, this.pollBackoffMs);
-
-        this.pollBackoffMs = Math.floor(this.pollBackoffMs / 2);
-        this.apiFailureStreakSince = null;
-        this.authRejected = false;
-      } catch (err) {
-        if (this.pollingActive && !this.apiFailureStreakSince) this.apiFailureStreakSince = Date.now();
-
-        if (err.retryAfter) {
-          delay = err.retryAfter * 1000;
-          this.pollBackoffMs = delay;
-          this.warn(`Rate limited. Backing off for ${delay}ms.`);
-        } else if (isAuthRejected(err.message)) {
-          if (!this.authRejected) this.error(`Poll error: ${err.message}. Retrying every 5 minutes until the token is refreshed.`);
-          this.authRejected = true;
-          delay = AUTH_REJECTED_POLL_INTERVAL_MS;
-        } else {
-          delay = Math.min(Math.max(this.pollBackoffMs, baseIntervalMs) * 2, 60000);
-          this.pollBackoffMs = delay;
-          this.error(`Poll error: ${err.message}`);
-        }
-      }
-
-      if (this.running && this.pollingActive) {
-        this.pollTimer = setTimeout(tick, delay);
-      } else {
-        this.pollTimer = null;
-      }
-    };
-
-    tick();
   }
 
   stop() {
@@ -623,15 +516,10 @@ export class SocketListener {
       clearTimeout(this.wsReconnectTimer);
       this.wsReconnectTimer = null;
     }
-    if (this.wsRetryTimer) {
-      clearInterval(this.wsRetryTimer);
-      this.wsRetryTimer = null;
-    }
     if (this.healthCheckTimer) {
       clearInterval(this.healthCheckTimer);
       this.healthCheckTimer = null;
     }
-    this.stopPolling();
     clearStateFile(this.stateFile);
     this.log("Listener stopped.");
   }

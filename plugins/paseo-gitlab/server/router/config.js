@@ -26,8 +26,10 @@ function getTokenFromKeychain(host) {
       { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 3000 },
     ).trim();
     return token || null;
-  } catch {
-    return null;
+  } catch (err) {
+    // security exits with 44 when the Keychain holds no such item.
+    if (err.status === 44) return null;
+    throw new Error(`Could not read the GitLab token from the Keychain: ${err.message}`);
   }
 }
 
@@ -36,10 +38,11 @@ export function loadConfig() {
   let fileConfig = {};
 
   if (fs.existsSync(CONFIG_FILE)) {
+    const content = fs.readFileSync(CONFIG_FILE, "utf8");
     try {
-      fileConfig = JSON.parse(fs.readFileSync(CONFIG_FILE, "utf8"));
-    } catch {
-      fileConfig = {};
+      fileConfig = JSON.parse(content);
+    } catch (err) {
+      throw new Error(`${CONFIG_FILE} is not valid JSON: ${err.message}`);
     }
   }
 

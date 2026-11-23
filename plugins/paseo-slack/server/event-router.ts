@@ -7,6 +7,7 @@ export function startEventRouter(server: PluginServerContext): () => void {
 
   listener.start().catch((error: Error) => {
     console.error(`[slack-router] Event router failed to start: ${error.message}`);
+    throw error;
   });
 
   const stopWatchingArchives = server.on("agent.archived", ({ agent }) => {

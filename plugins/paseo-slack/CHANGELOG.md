@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- The polling fallback: a WebSocket that cannot connect is retried and alerted on, never replaced by polling DMs. A failed DM history read, an unreadable config file and a refused token at start now fail instead of being skipped.
+
 ### Changed
 
 - `src/` builds on `paseo-fleet-kit` for subscriptions, dispatching and daemon state files; behaviour and stored files are unchanged.

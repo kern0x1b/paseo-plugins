@@ -20,6 +20,7 @@ import { humanize, mergeStatusLabel, shortReference, timeAgo } from "./format";
 import { LISTS_KEY } from "./queries";
 import { SearchPanel } from "./search";
 import type { Styles } from "./styles";
+import { readLocalStore, writeLocalStore } from "../local-store";
 
 type TabId = "todos" | "issues" | "mrs" | "review" | "search";
 
@@ -213,19 +214,8 @@ type LabelFilters = Record<LabelTab, string[]>;
 const LABEL_FILTERS_KEY = "paseo-gitlab:label-filters";
 
 function storedLabelFilters(): LabelFilters {
-  const empty: LabelFilters = { issues: [], mrs: [], review: [] };
-  try {
-    const raw = JSON.parse(
-      globalThis.localStorage?.getItem(LABEL_FILTERS_KEY) ?? "{}",
-    ) as Partial<LabelFilters>;
-    return {
-      issues: Array.isArray(raw.issues) ? raw.issues : [],
-      mrs: Array.isArray(raw.mrs) ? raw.mrs : [],
-      review: Array.isArray(raw.review) ? raw.review : [],
-    };
-  } catch {
-    return empty;
-  }
+  const stored = readLocalStore<Partial<LabelFilters>>(LABEL_FILTERS_KEY) ?? {};
+  return { issues: stored.issues ?? [], mrs: stored.mrs ?? [], review: stored.review ?? [] };
 }
 
 function LabelChip({ label, onRemove, styles }: { label: Label; onRemove?: () => void; styles: Styles }) {
@@ -404,9 +394,7 @@ export function ItemLists({ lists, onOpen, ui }: { lists: Lists; onOpen: (ref: I
     }
     setLabelFiltersState((current) => {
       const updated = { ...current, [labelTab]: next };
-      try {
-        globalThis.localStorage?.setItem(LABEL_FILTERS_KEY, JSON.stringify(updated));
-      } catch {}
+      writeLocalStore(LABEL_FILTERS_KEY, updated);
       return updated;
     });
   };
