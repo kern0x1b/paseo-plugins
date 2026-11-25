@@ -16,8 +16,8 @@ Comprehensive reference for the `slack` command-line utility.
 | `slack react <channel> <ts> <emoji>` | Add an emoji reaction to a message                            | `slack react C12345678 1727201234.567890 eyes`               |
 | `slack subscribe`                    | Subscribe an AI agent to incoming messages                    | `slack subscribe --agent 2a4279a --thread 1727201234.567890` |
 | `slack unsubscribe`                  | Remove active agent subscription                              | `slack unsubscribe --thread 1727201234.567890`               |
-| `slack subscriptions`                | List all active subscriptions and coordinator                 | `slack subscriptions`                                        |
-| `slack set-coordinator <id>`         | Set default Paseo Fleet Coordinator Agent                     | `slack set-coordinator afe3e85b-e376-4b7f-a10b`              |
+| `slack subscriptions`                | List all active subscriptions and the receiver session        | `slack subscriptions`                                        |
+| `slack set-coordinator <id>`         | Set default Paseo receiver session agent                      | `slack set-coordinator afe3e85b-e376-4b7f-a10b`              |
 | `slack daemon status`                | Show a legacy background listener (router runs in the plugin) | `slack daemon status`                                        |
 | `slack daemon stop`                  | Stop a legacy background listener                             | `slack daemon stop`                                          |
 | `slack mcp`                          | Launch Model Context Protocol server over stdio               | `slack mcp`                                                  |
@@ -140,7 +140,7 @@ slack unsubscribe --thread 1727200000.123
 
 #### `slack subscriptions` (alias: `slack subs`)
 
-Lists all active subscriptions and the designated coordinator agent.
+Lists all active subscriptions and the designated receiver session agent.
 
 ```bash
 $ slack subscriptions
@@ -151,7 +151,7 @@ Active Subscriptions (1):
 
 #### `slack set-coordinator <agent-id>`
 
-Assigns the default Fleet Coordinator Agent that handles unrouted DMs and mentions.
+Assigns the default receiver session agent that handles unrouted DMs and mentions.
 
 ```bash
 slack set-coordinator afe3e85b-e376-4b7f-a10b-5970ced5b432

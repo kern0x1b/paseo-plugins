@@ -7,14 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- The `reply_action` field of events and snapshot items. Replies go through the platform's own tool, with the ids from the event meta.
+
 ### Changed
 
+- Events are delivered as `<channel source="gitlab" kind=… urn=…>` tags, one per event, with no batch header. Other people's events (`scope="others"`) are marked in `meta` instead of a header.
+- `gitlab snapshot` prints a `paseo-channel/v1` document.
 - `src/` builds on `paseo-fleet-kit` for subscriptions, dispatching and daemon state files; behaviour and stored files are unchanged.
 - Moved into the [paseo-plugins](https://github.com/kern0x1b/paseo-plugins) monorepo. Install with `paseo plugin add git:kern0x1b/paseo-plugins:plugins/paseo-gitlab`.
 
 ### Added
 
-- `gitlab snapshot`: pending to-dos, open merge requests you author, review or are assigned to (with pipeline, merge status and approvals), and assigned issues as one `paseo-fleet/v1` document for `fleet sweep`.
+- `gitlab snapshot`: pending to-dos, open merge requests you author, review or are assigned to (with pipeline, merge status and approvals), and assigned issues as one `paseo-channel/v1` document for `channels sweep`.
 
 ## 1.1.0 - 2026-10-02
 

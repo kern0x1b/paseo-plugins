@@ -3,7 +3,11 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { describe, it } from "node:test";
-import { BaseEventDispatcher } from "../src/index.js";
+import { BaseEventDispatcher, createChannelEvent } from "../src/index.js";
+
+function tag(text) {
+  return `<channel source="test" kind="note" urn="urn:test:${text}">\n${text}\n</channel>`;
+}
 
 function createFakePaseo({ archived = [], missing = [], broken = false } = {}) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "fleet-kit-paseo-"));
@@ -11,10 +15,13 @@ function createFakePaseo({ archived = [], missing = [], broken = false } = {}) {
   const bin = path.join(directory, "paseo");
   fs.writeFileSync(
     bin,
-    `#!/bin/sh\nif [ "$1" = inspect ]; then\n  ${broken ? 'echo "sh: paseo: command not found" >&2; exit 127' : ":"}\n  case " ${missing.join(" ")} " in *" $2 "*) echo '{"error":{"code":"AGENT_NOT_FOUND"}}'; exit 1;; esac\n  case " ${archived.join(" ")} " in *" $2 "*) echo '{"Archived":true}';; *) echo '{"Archived":false}';; esac\n  exit 0\nfi\nprintf '%s\\n' "$2" >> "${calls}"\nprintf '%s' "$3" >> "${calls}"\nprintf '\\n' >> "${calls}"\n`,
+    `#!/bin/sh\nif [ "$1" = inspect ]; then\n  ${broken ? 'echo "sh: paseo: command not found" >&2; exit 127' : ":"}\n  case " ${missing.join(" ")} " in *" $2 "*) echo '{"error":{"code":"AGENT_NOT_FOUND"}}'; exit 1;; esac\n  case " ${archived.join(" ")} " in *" $2 "*) echo '{"Archived":true}';; *) echo '{"Archived":false}';; esac\n  exit 0\nfi\nprintf '%s\\0' "$2" "$3" >> "${calls}"\n`,
   );
   fs.chmodSync(bin, 0o755);
-  return { bin, readCalls: () => fs.readFileSync(calls, "utf8").trim().split("\n") };
+  return {
+    bin,
+    readCalls: () => fs.readFileSync(calls, "utf8").split("\0").slice(0, -1),
+  };
 }
 
 class TestDispatcher extends BaseEventDispatcher {
@@ -22,12 +29,14 @@ class TestDispatcher extends BaseEventDispatcher {
     return !event.noise;
   }
 
-  buildPrompt(event) {
-    return `prompt:${event.text}`;
-  }
+  source = "test";
 
-  buildEnvelope(event) {
-    return { protocol: "paseo-fleet/v1", content: event.text };
+  buildChannelEvent(event) {
+    if (event.bad) throw new Error("bad event");
+    return createChannelEvent({
+      content: event.text,
+      meta: { source: "test", kind: "note", urn: `urn:test:${event.text}` },
+    });
   }
 }
 
@@ -53,10 +62,10 @@ describe("BaseEventDispatcher", () => {
     });
     const result = await dispatcher.dispatch({ text: "hi" });
     assert.equal(result.type, "specific_agent");
-    assert.deepEqual(paseo.readCalls(), ["agent-s", "prompt:hi"]);
+    assert.deepEqual(paseo.readCalls(), ["agent-s", tag("hi")]);
   });
 
-  it("sends an envelope to the coordinator when no subscription matches", async () => {
+  it("sends the channel event to the coordinator when no subscription matches", async () => {
     const paseo = createFakePaseo();
     const dispatcher = new TestDispatcher({
       registry: registryWith({ coordinator: "agent-c" }),
@@ -64,7 +73,7 @@ describe("BaseEventDispatcher", () => {
     });
     const result = await dispatcher.dispatch({ text: "hi" });
     assert.equal(result.type, "coordinator");
-    assert.equal(result.envelope.content, "hi");
+    assert.equal(result.channelEvent.content, "hi");
     assert.equal(paseo.readCalls()[0], "agent-c");
   });
 
@@ -78,7 +87,7 @@ describe("BaseEventDispatcher", () => {
     const none = new TestDispatcher({ registry: registryWith(), config: {} });
     const result = await none.dispatch({ text: "hi" });
     assert.equal(result.routed, false);
-    assert.equal(result.eventPrompt, "prompt:hi");
+    assert.equal(result.eventPrompt, tag("hi"));
   });
 
   it("reports a failed delivery instead of throwing", async () => {
@@ -158,7 +167,7 @@ describe("BaseEventDispatcher.dispatchBatch", () => {
       ["other", "watched"],
     );
     assert.deepEqual(unrouted, []);
-    assert.deepEqual(paseo.readCalls(), ["agent-c", "prompt:other", "", "prompt:watched"]);
+    assert.deepEqual(paseo.readCalls(), ["agent-c", `${tag("other")}\n\n${tag("watched")}`]);
   });
 });
 
@@ -178,5 +187,39 @@ describe("BaseEventDispatcher agent status", () => {
     assert.equal(delivery.success, false);
     assert.equal(delivery.inactive, undefined);
     assert.match(delivery.error, /paseo inspect agent-c failed/);
+  });
+});
+
+describe("BaseEventDispatcher.buildBatchMessage isolation", () => {
+  it("replaces an invalid event with a delivery_error tag and keeps the rest of the batch", (t) => {
+    const logged = t.mock.method(console, "error", () => {});
+    const dispatcher = new TestDispatcher({ registry: registryWith(), config: {} });
+
+    const batch = dispatcher.buildBatchMessage([
+      { text: "first" },
+      { text: "broken", bad: true, id: "raw-42" },
+      { text: "third" },
+    ]);
+
+    assert.equal(
+      batch,
+      [
+        tag("first"),
+        '<channel source="test" kind="delivery_error" urn="urn:test:error:raw-42">\nbad event\nraw event: raw-42\n</channel>',
+        tag("third"),
+      ].join("\n\n"),
+    );
+    assert.equal(logged.mock.calls.length, 1);
+    assert.match(logged.mock.calls[0].arguments[0], /raw-42 could not be rendered: bad event/);
+  });
+
+  it("uses the time as the delivery_error urn when the event has no raw id", (t) => {
+    t.mock.method(console, "error", () => {});
+    const dispatcher = new TestDispatcher({ registry: registryWith(), config: {} });
+    const batch = dispatcher.buildBatchMessage([{ text: "x", bad: true }]);
+    assert.match(
+      batch,
+      /^<channel source="test" kind="delivery_error" urn="urn:test:error:\d+">\nbad event\n<\/channel>$/,
+    );
   });
 });

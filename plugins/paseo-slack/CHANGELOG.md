@@ -9,17 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- The `reply_action` field of events and snapshot items. Replies go through the platform's own tool, with the ids from the event meta.
+
 - The polling fallback: a WebSocket that cannot connect is retried and alerted on, never replaced by polling DMs. A failed DM history read, an unreadable config file and a refused token at start now fail instead of being skipped.
 
 ### Changed
 
+- Events are delivered as `<channel source="slack" kind=… urn=…>` tags, one per event, with no batch header.
+- `slack snapshot` prints a `paseo-channel/v1` document.
 - `src/` builds on `paseo-fleet-kit` for subscriptions, dispatching and daemon state files; behaviour and stored files are unchanged.
 - Moved into the [paseo-plugins](https://github.com/kern0x1b/paseo-plugins) monorepo as `plugins/paseo-slack`.
 - The event router runs inside Paseo as the server part of the `slack` plugin instead of a background `slack daemon` process.
 
 ### Added
 
-- `slack snapshot --since <iso>`: direct messages and mentions you have not replied to, grouped per conversation or thread, as one `paseo-fleet/v1` document for `fleet sweep`.
+- `slack snapshot --since <iso>`: direct messages and mentions you have not replied to, grouped per conversation or thread, as one `paseo-channel/v1` document for `channels sweep`.
 
 ## 1.1.0 - 2026-10-02
 

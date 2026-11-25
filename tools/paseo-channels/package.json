@@ -1,0 +1,38 @@
+{
+  "name": "paseo-channels",
+  "version": "1.0.0",
+  "description": "Route GitLab and Slack events into one Paseo receiver session, with the channel event protocol",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kern0x1b/paseo-plugins.git",
+    "directory": "tools/paseo-channels"
+  },
+  "homepage": "https://github.com/kern0x1b/paseo-plugins/tree/main/tools/paseo-channels#readme",
+  "bugs": {
+    "url": "https://github.com/kern0x1b/paseo-plugins/issues"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "bin": {
+    "channels": "./bin/channels.js"
+  },
+  "scripts": {
+    "test": "node --test \"test/*.test.*\""
+  },
+  "dependencies": {
+    "paseo-fleet-kit": "*"
+  },
+  "main": "src/index.js",
+  "keywords": [
+    "paseo",
+    "ai-agents",
+    "channels",
+    "claude-code",
+    "event-protocol",
+    "receiver-session"
+  ],
+  "author": "kern0x1b"
+}

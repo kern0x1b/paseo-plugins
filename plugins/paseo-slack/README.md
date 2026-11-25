@@ -27,8 +27,8 @@ Operates directly as your authentic Slack user identity with zero bot badges, su
                   ┌───────────────────────┴────────────────────────┐
                   │ (Specific subscription)                        │ (Unmatched DM / mention)
                   ▼                                                ▼
-     `paseo send <worker_agent_id>`                   `paseo send <coordinator_agent_id>`
-       [Target Worker Agent Session]                    [Fleet Coordinator Agent]
+     `paseo send <worker_agent_id>`                   `paseo send <receiver_agent_id>`
+       [Target Worker Agent Session]                    [receiver session agent]
        (e.g. working on specific MR)                    (Triages, dispatches, or spawns)
 ```
 
@@ -43,7 +43,7 @@ Operates directly as your authentic Slack user identity with zero bot badges, su
   - Guarantees **100% capture of all DMs** (even from colleagues who have never messaged before) and direct mentions.
 - **Dual Routing**:
   - **Specific Route**: Worker agents subscribe to specific threads/channels via `slack subscribe`.
-  - **Default Route**: All other incoming DMs and mentions route to the **Fleet Coordinator Agent**.
+  - **Default Route**: All other incoming DMs and mentions route to the **receiver session agent**.
 - **Universal Slack API Access**: `slack api <method> [key=value...]` allows calling any of the 200+ Slack Web API endpoints.
 - **Built-in MCP Server**: `slack mcp` runs a standard stdio Model Context Protocol server exposing Slack tools directly to AI agents.
 - **Zero External Dependencies**: Pure modern Node.js 22+ ESM using native `fetch` and native `WebSocket`.
@@ -129,17 +129,17 @@ slack react C12345678 1727200000.123 eyes
 ### AI Fleet Coordination & Routing
 
 ```bash
-# 1. Coordinator agent binding
+# 1. Receiver session binding
 slack set-coordinator afe3e85b-e376-4b7f-a10b-5970ced5b432
 slack unset-coordinator
 
 # 2. Worker agent subscribes to replies in a specific review thread
 slack subscribe --agent 2a4279a --thread 1727200000.123
 
-# 3. View active fleet subscriptions and bound coordinator
+# 3. View active subscriptions and the bound receiver session
 slack subscriptions
 
-# DMs and mentions you have not replied to, as paseo-fleet/v1 JSON (for `fleet sweep`)
+# DMs and mentions you have not replied to, as paseo-channel/v1 JSON (for `channels sweep`)
 slack snapshot --since 2026-10-01T00:00:00Z
 ```
 

@@ -57,6 +57,12 @@ function makeFakeDispatcher() {
     calls: [],
     alertCalls: [],
     setMyUserId() {},
+    setTeamId(teamId) {
+      this.teamId = teamId;
+    },
+    renderHealthAlert(message) {
+      return message;
+    },
     async dispatch(event) {
       this.calls.push(event);
       return { routed: false };
@@ -72,7 +78,7 @@ function makeFakeClient({ openUserSessionSocket, listChannels, getHistory } = {}
   return {
     config: { xoxcToken: "fake-xoxc", appToken: "" },
     async authTest() {
-      return { user_id: "U_SELF", user: "tester", team: "test" };
+      return { user_id: "U_SELF", user: "tester", team: "test", team_id: "T_AUTH" };
     },
     openUserSessionSocket:
       openUserSessionSocket || (async () => ({ url: "wss://fake", headers: {}, selfId: "U_SELF" })),
@@ -472,4 +478,19 @@ test("start fails when Slack refuses the token instead of running without a user
   t.after(() => listener.stop());
 
   await assert.rejects(listener.start(), /invalid_auth/);
+});
+
+test("start hands the team of the authenticated session to the dispatcher", async (t) => {
+  installFakeWebSocket(t);
+  const dispatcher = makeFakeDispatcher();
+  const listener = new SocketListener({
+    client: makeFakeClient(),
+    dispatcher,
+    stateFile: testStateFile(),
+  });
+  t.after(() => listener.stop());
+
+  await listener.start();
+
+  assert.equal(dispatcher.teamId, "T_AUTH");
 });

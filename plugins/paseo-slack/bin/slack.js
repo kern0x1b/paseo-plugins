@@ -56,7 +56,7 @@ COMMANDS:
 
   react <channel> <ts> <emoji>     Add an emoji reaction (without colons, e.g. thumbsup)
 
-  snapshot                         Print DMs and mentions you have not replied to as paseo-fleet/v1 JSON
+  snapshot                         Print DMs and mentions you have not replied to as paseo-channel/v1 JSON
                                    Options: --since <iso-timestamp> (default: 24 hours ago)
 
   whoami                           Test authentication and print current user / team

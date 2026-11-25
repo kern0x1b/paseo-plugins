@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { createChannelEvent, renderChannelEvent } from "./channel-event.js";
 
 const execFileAsync = promisify(execFile);
 const AGENT_STATUS_TTL_MS = 60 * 1000;
@@ -14,12 +15,40 @@ export class BaseEventDispatcher {
     return true;
   }
 
-  buildPrompt() {
-    throw new Error("buildPrompt(event) must be implemented by the adapter");
+  buildChannelEvent() {
+    throw new Error("buildChannelEvent(event) must be implemented by the adapter");
   }
 
-  buildEnvelope() {
-    throw new Error("buildEnvelope(event) must be implemented by the adapter");
+  rawEventRef(event) {
+    return event.id ?? null;
+  }
+
+  buildPrompt(event) {
+    return renderChannelEvent(this.buildChannelEvent(event));
+  }
+
+  buildDeliveryError(event, error) {
+    const ref = this.rawEventRef(event);
+    return createChannelEvent({
+      content: ref === null ? error.message : `${error.message}\nraw event: ${ref}`,
+      meta: {
+        source: this.source,
+        kind: "delivery_error",
+        urn: `urn:${this.source}:error:${ref ?? Date.now()}`,
+      },
+    });
+  }
+
+  buildPromptOrDeliveryError(event) {
+    try {
+      return this.buildPrompt(event);
+    } catch (err) {
+      const ref = this.rawEventRef(event);
+      console.error(
+        `[${new Date().toISOString()}] Event ${ref ?? "without id"} could not be rendered: ${err.message}`,
+      );
+      return renderChannelEvent(this.buildDeliveryError(event, err));
+    }
   }
 
   resolveCoordinatorId() {
@@ -82,7 +111,7 @@ export class BaseEventDispatcher {
   }
 
   buildBatchMessage(events) {
-    return events.map((event) => this.buildPrompt(event)).join("\n\n");
+    return events.map((event) => this.buildPromptOrDeliveryError(event)).join("\n\n");
   }
 
   async dispatchBatch(events) {
@@ -139,10 +168,10 @@ export class BaseEventDispatcher {
 
     const coordinatorId = this.resolveCoordinatorId();
     if (coordinatorId) {
-      const envelope = this.buildEnvelope(event);
-      const delivery = await this.sendToPaseo(coordinatorId, JSON.stringify(envelope, null, 2));
+      const channelEvent = this.buildChannelEvent(event);
+      const delivery = await this.sendToPaseo(coordinatorId, renderChannelEvent(channelEvent));
       if (!delivery.inactive) {
-        return { routed: true, type: "coordinator", targetAgent: coordinatorId, delivery, envelope };
+        return { routed: true, type: "coordinator", targetAgent: coordinatorId, delivery, channelEvent };
       }
     }
 

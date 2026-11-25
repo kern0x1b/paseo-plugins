@@ -59,7 +59,7 @@ COMMANDS:
                                    Options: --project <id>
   pipelines                        View recent CI/CD pipelines
                                    Options: --project <id> --scope <branches|finished> --limit <n>
-  snapshot                         Print everything currently waiting on you as paseo-fleet/v1 JSON
+  snapshot                         Print everything currently waiting on you as paseo-channel/v1 JSON
                                    (pending to-dos, open MRs you author/review/are assigned, assigned issues)
 
   subscribe                        Subscribe a Paseo agent to receive real-time push events

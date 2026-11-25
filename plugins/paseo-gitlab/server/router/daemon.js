@@ -72,7 +72,7 @@ export class GitLabDaemon {
       new GitLabEventDispatcher({
         registry: this.registry,
         config: this.config,
-        label: scope === "others" ? "GitLab, other people's events" : "GitLab",
+        scope,
       });
 
     if (this.dryRun) {
@@ -230,7 +230,15 @@ export class GitLabDaemon {
     if (queued.length === 0) return;
 
     const byEvent = new Map(queued.map((item) => [item.event, item]));
-    const { results, unrouted } = await this.dispatcher.dispatchBatch(queued.map((item) => item.event));
+    let outcome;
+    try {
+      outcome = await this.dispatcher.dispatchBatch(queued.map((item) => item.event));
+    } catch (err) {
+      for (const item of queued) item.undo();
+      this.pendingEvents.push(...queued);
+      throw err;
+    }
+    const { results, unrouted } = outcome;
 
     for (const result of results) {
       const items = result.events.map((event) => byEvent.get(event));
@@ -491,6 +499,7 @@ export class GitLabDaemon {
       category: "Daemon Health (ALERT)",
       actionName: "daemon_health_alert",
       author: "GitLab Daemon",
+      projectPath: "gitlab-daemon",
       targetType: "DaemonHealth",
       title: `GitLab daemon checks failing since ${sinceIso} (${sources}): ${summary}`,
       raw: {
@@ -525,6 +534,7 @@ export class GitLabDaemon {
       category: "Daemon Health (RECOVERED)",
       actionName: "daemon_health_recovered",
       author: "GitLab Daemon",
+      projectPath: "gitlab-daemon",
       targetType: "DaemonHealth",
       title: `GitLab daemon polling recovered at ${nowIso} (previously failing: ${sources})`,
       raw: { recoveredAt: nowIso, previouslyFailing: recoveredSources },
