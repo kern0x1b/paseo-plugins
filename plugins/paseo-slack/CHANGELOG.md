@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `slack snapshot --since <iso>`: direct messages and mentions you have not replied to, grouped per conversation or thread, as one `paseo-channel/v1` document for `fleet sweep`.
+- `slack snapshot --since <iso>`: direct messages and mentions you have not replied to, grouped per conversation or thread, as one `paseo-channel/v1` document for `channels sweep`.
 
 ## 1.1.0 - 2026-10-02
 

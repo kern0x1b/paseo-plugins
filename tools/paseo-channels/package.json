@@ -1,15 +1,15 @@
 {
-  "name": "paseo-fleet",
+  "name": "paseo-channels",
   "version": "1.0.0",
-  "description": "Model-agnostic fleet coordinator skills and event protocol for Paseo",
+  "description": "Route GitLab and Slack events into one Paseo receiver session, with the channel event protocol",
   "type": "module",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/kern0x1b/paseo-plugins.git",
-    "directory": "tools/paseo-fleet"
+    "directory": "tools/paseo-channels"
   },
-  "homepage": "https://github.com/kern0x1b/paseo-plugins/tree/main/tools/paseo-fleet#readme",
+  "homepage": "https://github.com/kern0x1b/paseo-plugins/tree/main/tools/paseo-channels#readme",
   "bugs": {
     "url": "https://github.com/kern0x1b/paseo-plugins/issues"
   },
@@ -17,8 +17,7 @@
     "node": ">=22.0.0"
   },
   "bin": {
-    "fleet": "./bin/fleet.js",
-    "paseo-fleet": "./bin/fleet.js"
+    "channels": "./bin/channels.js"
   },
   "scripts": {
     "test": "node --test \"test/*.test.*\""
@@ -30,13 +29,10 @@
   "keywords": [
     "paseo",
     "ai-agents",
-    "multi-agent",
-    "orchestrator",
-    "coordinator",
-    "worker",
-    "reviewer",
-    "mcp",
-    "skills"
+    "channels",
+    "claude-code",
+    "event-protocol",
+    "receiver-session"
   ],
   "author": "kern0x1b"
 }

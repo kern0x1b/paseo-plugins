@@ -47,7 +47,7 @@
     "mcp",
     "paseo",
     "ai-agents",
-    "fleet-coordination",
+    "channel-routing",
     "router",
     "cli"
   ],

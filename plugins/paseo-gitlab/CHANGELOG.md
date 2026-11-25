@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `gitlab snapshot`: pending to-dos, open merge requests you author, review or are assigned to (with pipeline, merge status and approvals), and assigned issues as one `paseo-channel/v1` document for `fleet sweep`.
+- `gitlab snapshot`: pending to-dos, open merge requests you author, review or are assigned to (with pipeline, merge status and approvals), and assigned issues as one `paseo-channel/v1` document for `channels sweep`.
 
 ## 1.1.0 - 2026-10-02
 

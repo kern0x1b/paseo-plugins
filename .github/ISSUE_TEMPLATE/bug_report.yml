@@ -13,7 +13,7 @@ body:
       label: Package
       options:
         - paseo-gitlab
-        - paseo-fleet
+        - paseo-channels
         - paseo-slack
     validations:
       required: true

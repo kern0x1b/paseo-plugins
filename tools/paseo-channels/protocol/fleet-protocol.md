@@ -1,6 +1,6 @@
 # Paseo Fleet Event Protocol
 
-Adapters deliver events to the Fleet Coordinator in the shape Claude Code Channels use. The reference for
+Adapters deliver events to the receiver session in the shape Claude Code Channels use. The reference for
 the channel model is [Channels reference](https://code.claude.com/docs/en/channels-reference).
 
 ## 1. Event
@@ -41,7 +41,7 @@ An event that lacks `source`, `kind` or `urn`, or has an invalid key, is an erro
 
 ## 2. Delivery
 
-An adapter renders the event as a tag and sends it to the Coordinator:
+An adapter renders the event as a tag and sends it to the receiver session:
 
 ```text
 <channel source="gitlab" kind="merge_request_opened" urn="urn:gitlab:gitlab.corp.net:core/backend:mr:42" author="dev" mr="42" project="core/backend" title="Add payment gateway" url="https://gitlab.corp.net/core/backend/-/merge_requests/42">
@@ -54,7 +54,7 @@ An adapter renders the event as a tag and sends it to the Coordinator:
 - A batch is the tags one after another, separated by a blank line. It has no header.
 
 ```bash
-paseo send <coordinator_agent_id> '<channel ...>...</channel>' --no-wait
+paseo send <receiver_agent_id> '<channel ...>...</channel>' --no-wait
 ```
 
 ## 3. Snapshot
@@ -83,5 +83,5 @@ Every adapter prints one document:
 - A failing source goes to `errors`, and the other sources are still returned.
 - Snapshots are read-only.
 
-`fleet sweep` runs the snapshot of every adapter in `adapters` (default `slack` and `gitlab`), refuses a document
+`channels sweep` runs the snapshot of every adapter in `adapters` (default `slack` and `gitlab`), refuses a document
 that does not match the format, and merges the items across adapters by `meta.urn`.

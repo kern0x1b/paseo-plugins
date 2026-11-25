@@ -295,12 +295,12 @@ server/router/gitlab-client.js lightweight REST/GraphQL client reading token fro
 gitlab whoami
 gitlab todos
 gitlab mr 101
-gitlab snapshot                       # Everything waiting on you as paseo-channel/v1 JSON (for `fleet sweep`)
+gitlab snapshot                       # Everything waiting on you as paseo-channel/v1 JSON (for `channels sweep`)
 
-# AI Fleet Coordinator Binding
-gitlab set-coordinator <agent-id>     # Bind active Paseo coordinator agent ID
-gitlab unset-coordinator              # Clear coordinator binding
-gitlab subscriptions                  # View active MR/issue subscriptions and coordinator
+# Receiver session binding
+gitlab set-coordinator <agent-id>     # Bind the receiver session agent ID
+gitlab unset-coordinator              # Clear the receiver session binding
+gitlab subscriptions                  # View active MR/issue subscriptions and the receiver session
 
 # Run MCP server
 gitlab mcp
@@ -327,7 +327,7 @@ You can also view or set configuration directly via CLI:
 
 ### MCP Server Setup
 
-To expose GitLab tools and fleet routing to Claude Desktop, Paseo, Antigravity, or other MCP clients, add this to your MCP configuration:
+To expose GitLab tools and event routing to Claude Desktop, Paseo, Antigravity, or other MCP clients, add this to your MCP configuration:
 
 ```json
 {

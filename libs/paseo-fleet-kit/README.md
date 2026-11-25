@@ -3,7 +3,7 @@
 Shared building blocks for Paseo fleet adapters. Zero dependencies, Node 22+, ESM.
 `paseo-slack` and `paseo-gitlab` are built on it, and so is any new adapter.
 The contract an adapter implements is in the
-[adapter author guide](../../tools/paseo-fleet/protocol/author-guide.md).
+[adapter author guide](../../tools/paseo-channels/protocol/author-guide.md).
 
 ```js
 import {
@@ -18,17 +18,17 @@ import {
 } from "paseo-fleet-kit";
 ```
 
-| Export                                          | Use it for                                                                                                                                          |
-| ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `createChannelEvent`, `validateChannelEvent`    | Build and check a `{ content, meta }` event. Refuses a missing `source`, `kind` or `urn`, and drops absent meta values.                             |
-| `renderChannelEvent`                            | Render an event as the `<channel source=… kind=… urn=…>` tag Claude Code shows.                                                                     |
-| `mergeChannelEventsByUrn`                       | Merge events that share a `meta.urn` into one event.                                                                                                |
-| `validateSnapshotDocument`                      | Check the output of `<adapter> snapshot` (`format: "paseo-channel/v1"`).                                                                            |
-| `BaseSubscriptionRegistry`                      | Subscription file with coordinator ID, `addSubscription`, `removeSubscriptions`. You add `add`, `remove` and `findMatchingAgent` for your platform. |
-| `BaseEventDispatcher`                           | The routing flow: filter, subscription first, then Coordinator, then unrouted. You implement `shouldProcess` and `buildChannelEvent`.               |
-| `createDaemonStateStore`                        | `daemon-state.json` read, write, clear and the "is this pid really our daemon" check.                                                               |
-| `readJsonFile`, `writeJsonFile`, `removeFile`   | Small file helpers that create directories and refuse corrupt JSON.                                                                                 |
-| `paseo-fleet-kit/testing` → `useIsolatedHome()` | Point `HOME` at a temp directory so tests never touch real config.                                                                                  |
+| Export                                          | Use it for                                                                                                                                                   |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `createChannelEvent`, `validateChannelEvent`    | Build and check a `{ content, meta }` event. Refuses a missing `source`, `kind` or `urn`, and drops absent meta values.                                      |
+| `renderChannelEvent`                            | Render an event as the `<channel source=… kind=… urn=…>` tag Claude Code shows.                                                                              |
+| `mergeChannelEventsByUrn`                       | Merge events that share a `meta.urn` into one event.                                                                                                         |
+| `validateSnapshotDocument`                      | Check the output of `<adapter> snapshot` (`format: "paseo-channel/v1"`).                                                                                     |
+| `BaseSubscriptionRegistry`                      | Subscription file with the receiver session ID, `addSubscription`, `removeSubscriptions`. You add `add`, `remove` and `findMatchingAgent` for your platform. |
+| `BaseEventDispatcher`                           | The routing flow: filter, subscription first, then the receiver session, then unrouted. You implement `shouldProcess` and `buildChannelEvent`.               |
+| `createDaemonStateStore`                        | `daemon-state.json` read, write, clear and the "is this pid really our daemon" check.                                                                        |
+| `readJsonFile`, `writeJsonFile`, `removeFile`   | Small file helpers that create directories and refuse corrupt JSON.                                                                                          |
+| `paseo-fleet-kit/testing` → `useIsolatedHome()` | Point `HOME` at a temp directory so tests never touch real config.                                                                                           |
 
 ## A minimal adapter
 

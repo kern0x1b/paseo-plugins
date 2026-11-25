@@ -24,13 +24,13 @@ Standalone command-line tools and shared libraries. None of them is a Paseo plug
 | Folder                                         | What it does                                                                         |
 | ---------------------------------------------- | ------------------------------------------------------------------------------------ |
 | [`libs/paseo-fleet-kit`](libs/paseo-fleet-kit) | Shared library for adapters: channel events, subscriptions, dispatcher, daemon state |
-| [`tools/paseo-fleet`](tools/paseo-fleet)       | Coordinator, Worker and Reviewer skills plus the event protocol                      |
+| [`tools/paseo-channels`](tools/paseo-channels) | Receiver session skill, the `channels` CLI and the event protocol                    |
 
 ## Connecting another platform
 
-`tools/paseo-fleet` defines how platforms push events to an agent Coordinator, and Slack and GitLab are
+`tools/paseo-channels` defines how platforms push events to an agent receiver session. Slack and GitLab are
 the two reference adapters, both built on [`libs/paseo-fleet-kit`](libs/paseo-fleet-kit). To add Microsoft Teams, Jira or anything else, follow the
-[adapter author guide](tools/paseo-fleet/protocol/author-guide.md): it lists every command an adapter
+[adapter author guide](tools/paseo-channels/protocol/author-guide.md): it lists every command an adapter
 provides, the event shape, subscriptions, and the snapshot contract.
 
 ## Development
