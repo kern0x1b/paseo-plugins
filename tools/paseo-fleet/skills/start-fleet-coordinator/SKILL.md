@@ -1,6 +1,6 @@
 ---
 name: start-fleet-coordinator
-description: Start the Fleet Coordinator session: binds your agent ID, enables the GitLab and Slack router plugins, sweeps every adapter for work that was already waiting, verifies it, presents a prioritised plan, dispatches workers, and then listens for inbound fleet events.
+description: 'Start the Fleet Coordinator session: binds your agent ID, enables the GitLab and Slack router plugins, sweeps every adapter for work that was already waiting, verifies it, presents a prioritised plan, dispatches workers, and then listens for inbound fleet events.'
 user-invocable: true
 argument-hint: "[--since <iso|24h|3d>]"
 ---

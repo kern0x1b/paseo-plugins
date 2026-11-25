@@ -1,7 +1,7 @@
 {
   "name": "paseo-fleet",
   "version": "1.0.0",
-  "description": "Model-agnostic multi-agent fleet skills (Coordinator, Worker, Reviewer) and event protocol for Paseo",
+  "description": "Model-agnostic fleet coordinator skills and event protocol for Paseo",
   "type": "module",
   "license": "MIT",
   "repository": {

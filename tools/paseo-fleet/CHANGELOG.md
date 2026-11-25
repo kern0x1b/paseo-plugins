@@ -15,8 +15,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Snapshot (pull) contract in the protocol specification and the adapter author guide.
 - Coordinator startup sweep: verification rules, ordering and plan format (`skills/coordinator/references/startup-sweep.md`).
 
+### Removed
+
+- `skills/worker`, `skills/reviewer` and `skills/fleet-setup`: Workers get a task-specific prompt from the coordinator, review follows the project's own rules, and setup is done by `fleet activate`.
+- Coordinator references `triage-matrix.md` and `dispatch-lifecycle.md`, folded into the coordinator skill.
+
 ### Changed
 
+- Coordinator skill rewritten around how the fleet actually works: verify claims before acting, narrow Worker prompts, the project's own review gate, approval for every outbound action.
 - The protocol helpers (`createEventEnvelope`, `validateEventEnvelope`, `validateSnapshotDocument`) now live in `paseo-fleet-kit` and are re-exported from here.
 - `start-fleet-coordinator` sweeps, verifies and plans waiting work before listening for events.
 - Coordinator Authority Rules: outbound writes (messages, comments, pushes, merge requests, merges) require explicit user approval of the draft.

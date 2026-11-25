@@ -1,6 +1,6 @@
 ---
 name: end-fleet-coordinator
-description: Stop the Fleet Coordinator session: clears the coordinator binding on the GitLab and Slack adapters and deactivates event routing. The router plugins keep running.
+description: 'Stop the Fleet Coordinator session: clears the coordinator binding on the GitLab and Slack adapters and deactivates event routing. The router plugins keep running.'
 user-invocable: true
 ---
 

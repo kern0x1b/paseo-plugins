@@ -53,23 +53,16 @@ Enables autonomous agent teams to triage incoming events from external channels 
 
 ## Fleet Skills & Roles
 
-`paseo-fleet` provides ready-to-use skills for both user invocation and autonomous subagent delegation:
+`paseo-fleet` provides three skills:
 
-### User-Invocable Skills
+| Skill | Invocation | Description |
+| --- | --- | --- |
+| **Start Coordinator** | `/start-fleet-coordinator` | Activates the session as coordinator, binds the Slack and GitLab adapters, sweeps what was already waiting, presents a verified plan, then listens for events. |
+| **End Coordinator** | `/end-fleet-coordinator` | Clears the coordinator bindings on the adapters. The router plugins keep running. |
+| **Coordinator** | `skills/coordinator` | How the coordinator triages events, delegates code to Worker agents in worktrees with narrow prompts, gates work with the project's own review, and drafts every outbound action for approval. |
 
-| Skill                 | Invocation Command         | Description                                                                                                                                                                                    |
-| --------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Start Coordinator** | `/start-fleet-coordinator` | **One-touch autonomous activation.** Self-detects `$PASEO_AGENT_ID`, binds to Slack & GitLab adapters, enables their router plugins if disabled, verifies push channels, and begins listening. |
-| **End Coordinator**   | `/end-fleet-coordinator`   | **One-touch shutdown.** Clears coordinator bindings on the Slack & GitLab adapters and deactivates event routing. The router plugins keep running. Alias: `/stop-fleet-coordinator`.           |
-| **Fleet Setup**       | `fleet-setup`              | Automatically discovers installed CLI push adapters (`which slack`, `which gitlab`), provisions directories, registers channels, and verifies connectivity.                                    |
-
-### Autonomous Agent Roles
-
-| Role            | Skill Path           | Workspace Isolation                  | Key Responsibility                                                                                                                                                  |
-| --------------- | -------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Coordinator** | `skills/coordinator` | Active session                       | Triages incoming `paseo-fleet/v1` envelopes, decomposes complex tasks, provisions git worktrees, delegates to Workers/Reviewers, and sends outbound notifications.  |
-| **Worker**      | `skills/worker`      | Isolated Git Worktree (`branch-off`) | Implements code changes, writes reproduction tests (TDD), verifies locally with test suites, and produces structured completion reports.                            |
-| **Reviewer**    | `skills/reviewer`    | Independent review session           | Evaluates Worker diffs with independent perspective, inspects edge cases & security invariants, and issues definitive verdicts (`APPROVED` or `CHANGES_REQUESTED`). |
+Workers are ordinary agents started by the coordinator with a task-specific prompt; review follows the project's
+own rules. The plugin ships no separate Worker or Reviewer skill.
 
 ---
 
@@ -187,10 +180,8 @@ Anyone can build custom adapters (e.g. `paseo-telegram`, `paseo-github`, `paseo-
 
 - [**Paseo Fleet Protocol Specification**](protocol/fleet-protocol.md)
 - [**Adapter Author Guide**](protocol/author-guide.md)
-- [**Coordinator Triage Matrix**](skills/coordinator/references/triage-matrix.md)
-- [**Coordinator Dispatch Lifecycle**](skills/coordinator/references/dispatch-lifecycle.md)
-- [**Worker Handbook & Delivery Standard**](skills/worker/references/worker-handbook.md)
-- [**Reviewer Rubric & Audit Checklist**](skills/reviewer/references/review-rubric.md)
+- [**Coordinator Skill**](skills/coordinator/SKILL.md)
+- [**Coordinator Startup Sweep**](skills/coordinator/references/startup-sweep.md)
 
 ---
 
