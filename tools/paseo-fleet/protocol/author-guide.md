@@ -1,43 +1,31 @@
-# Adapter Author Guide: Building a Paseo Fleet Adapter
+# Adapter Author Guide
 
-An adapter connects one external platform (Slack, GitLab, Microsoft Teams, Jira, Discord) to the
-fleet Coordinator. This guide is the complete contract. Two reference adapters implement it:
+An adapter connects one platform to the Fleet Coordinator. The event shape is in
+[fleet-protocol.md](fleet-protocol.md). Two reference adapters implement it:
 
 - [`plugins/paseo-slack`](../../../plugins/paseo-slack): chat platform, WebSocket events, subscriptions per thread.
 - [`plugins/paseo-gitlab`](../../../plugins/paseo-gitlab): forge, polling, health alerts.
 
-Read them next to this guide. The file names below are the same in both.
-
-Start from [`libs/paseo-fleet-kit`](../../../libs/paseo-fleet-kit): it already implements the envelope,
-the subscription file, the routing flow and the daemon state file. An adapter adds only what is specific
-to its platform: how events arrive, the filter, the subscription match, the envelope fields and the
-reply tool.
+Start from [`libs/paseo-fleet-kit`](../../../libs/paseo-fleet-kit). It provides the event helpers, the
+subscription file, the routing flow and the daemon state file. An adapter adds only what is specific to its
+platform: how events arrive, the filter, the subscription match and the event meta.
 
 The fleet never imports an adapter. It runs adapters as commands named in `~/.config/paseo/fleet/config.json`
-under `adapters` (default `["slack", "gitlab"]`), so a new adapter needs no change to `paseo-fleet`:
-install the command on `PATH`, add its name to `adapters`, and `fleet activate`, `fleet stop`,
-`fleet status` and `fleet sweep` include it.
+under `adapters` (default `["slack", "gitlab"]`).
 
-## 1. The contract
+## 1. Commands
 
-An adapter is one executable, `<name>`, with these subcommands. Items marked fleet are called by the
-`fleet` CLI; the rest are for the user and the agents.
+| Command                               | Called by | Behaviour                                                                            |
+| ------------------------------------- | --------- | ------------------------------------------------------------------------------------ |
+| `<name> set-coordinator <id>`         | fleet     | Store the Coordinator agent ID. `none` or `--clear` unsets it.                       |
+| `<name> unset-coordinator`            | fleet     | Clear the stored Coordinator agent ID.                                               |
+| `<name> snapshot [--since <iso>]`     | fleet     | Print what already waits on the user as one document (fleet-protocol.md, section 3). |
+| `<name> subscribe --agent <id> …`     | agents    | Route matching events to one agent instead of the Coordinator.                       |
+| `<name> unsubscribe`, `subscriptions` | agents    | Remove and list subscriptions.                                                       |
+| `<name> mcp`                          | agents    | Stdio MCP server exposing the platform's tools.                                      |
 
-| Command                               | Called by | Behaviour                                                                                                                                    |
-| ------------------------------------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `<name> daemon`                       | plugin    | Run the real-time event router in the foreground until `SIGTERM`. Reference adapters run it as the plugin's server part instead (section 5). |
-| `<name> daemon status`                | user      | Print `{"running": true, "pid": 123, ...}` as JSON for a legacy background router. `running` is false when none is alive.                    |
-| `<name> daemon stop`                  | user      | Send `SIGTERM` to a legacy background router and wait for it to exit.                                                                        |
-| `<name> set-coordinator <id>`         | fleet     | Store the Coordinator agent ID. `none` or `--clear` unsets it.                                                                               |
-| `<name> unset-coordinator`            | fleet     | Clear the stored Coordinator agent ID.                                                                                                       |
-| `<name> snapshot [--since <iso>]`     | fleet     | Print what already waits on the user as one JSON document (section 5 of the protocol).                                                       |
-| `<name> subscribe --agent <id> …`     | agents    | Route matching events to one specific agent instead of the Coordinator (section 4).                                                          |
-| `<name> unsubscribe`, `subscriptions` | agents    | Remove and list subscriptions.                                                                                                               |
-| `<name> mcp`                          | agents    | Stdio MCP server exposing the platform's tools, including the one named in `reply_action`.                                                   |
-| `<name> send …`                       | agents    | Post a reply, the CLI form of the MCP reply tool (`gitlab comment` in the GitLab adapter).                                                   |
-
-An adapter that skips `subscribe` and `mcp` still works as a push source, but the Coordinator cannot
-reply through it and agents cannot follow a single thread.
+The reference adapters run the event router as the server part of a Paseo plugin (`index.server.ts`).
+`paseo plugin ls` shows its status and `paseo plugin logs <id>` its logs.
 
 ## 2. Event flow
 
@@ -45,41 +33,35 @@ reply through it and agents cannot follow a single thread.
 platform event ─► Layer 1 filter ─► subscription match? ─yes─► plain prompt to that agent
                                           │ no
                                           ▼
-                              envelope ─► paseo send <coordinator> '<json>' --no-wait
+                       channel event ─► paseo send <coordinator> '<channel tag>' --no-wait
 ```
 
 1. **Receive.** WebSocket, long poll, webhook or timer. Store nothing the platform can give back.
 2. **Layer 1 filter.** Drop noise before it reaches an agent: your own messages, system and bot chatter,
-   channels where you are not mentioned. Keep direct messages, mentions, and anything matched by a
-   subscription.
-3. **Route.** The first matching subscription wins and its agent gets a plain-text prompt. With no
-   match, the event goes to the Coordinator as a `paseo-fleet/v1` envelope.
-4. **Resolve the Coordinator** in this order: the ID set by `set-coordinator`, then the coordinator
-   field of the adapter's own config. With none, return `routed: false` and log it. Never throw.
-5. **Deliver** with `paseo send <agent-id> <text> --no-wait`, using `execFile` with an argument array.
-   Do not build a shell string from event text.
+   channels where you are not mentioned. Keep direct messages, mentions and anything a subscription matches.
+3. **Route.** The first matching subscription wins and its agent gets the event. With no match, the event goes
+   to the Coordinator.
+4. **Resolve the Coordinator**: the ID set by `set-coordinator`, then the coordinator field of the adapter's
+   config. With none, return `routed: false` and log it. Never throw.
+5. **Deliver** with `paseo send <agent-id> <text> --no-wait`, through `execFile` with an argument array. Do not
+   build a shell string from event text.
 
-## 3. The envelope
+## 3. The event
 
-Build it with `createEventEnvelope` from `paseo-fleet` or by hand, then check it with
-`fleet validate`. Required: `protocol`, `id`, `source`, `event_type`, `actor`, `content`,
-`reply_action`.
+Build it with `createChannelEvent` from `paseo-fleet-kit`. It refuses an event without `source`, `kind` or
+`urn`, and drops absent meta values. Render it with `renderChannelEvent`.
 
-Choices that matter:
-
-- **`id` is deterministic.** Derive it from platform identifiers (`evt_slack_<team>_<channel>_<ts>`),
-  never from a clock or random number. A retry then deduplicates instead of repeating.
 - **`urn` identifies the resource**, not the event: `urn:<platform>:<instance>:<scope>:<type>:<id>`.
-  `fleet sweep` merges items from every adapter by `urn`.
-- **`instance`** is the workspace, tenant or host. It lets one fleet serve two Slack workspaces or two
-  GitLab hosts.
-- **`reply_action` is complete.** The Coordinator must never guess where to reply: put the tool name
-  and every parameter it needs (channel, thread, chat ID) into `reply_action.params`.
-- **`content` is text only.** Strip markup the model cannot use and keep it under a few kilobytes.
+  `fleet sweep` merges items from every adapter by `meta.urn`.
+- **`urn` is deterministic.** Derive it from platform identifiers, never from a clock or random number, so a
+  retry deduplicates instead of repeating.
+- **`kind` is the semantic category**, such as `dm`, `mention`, `merge_request_opened`.
+- **No defaults.** When a platform field is missing, throw. Do not write `unknown`, `default` or `null`.
+- **`content` is text.** Keep it readable and bounded in length (the GitLab adapter cuts bodies at 4000 characters).
 
 ## 4. Subscriptions
 
-A subscription is a small record in the adapter's own config directory:
+A subscription is a small record in the adapter's config directory:
 
 ```json
 {
@@ -90,74 +72,34 @@ A subscription is a small record in the adapter's own config directory:
 }
 ```
 
-Match on the platform's own coordinates (channel, thread, sender, project, merge request). A field left
-empty matches anything. Adding an identical subscription replaces the old one. `list`, `add` and
-`remove` are the whole API. Extend `BaseSubscriptionRegistry` and write `add`, `remove` and
-`findMatchingAgent`.
+Match on the platform's own coordinates (channel, thread, sender, project, merge request). A field left empty
+matches anything. Adding an identical subscription replaces the old one. Extend `BaseSubscriptionRegistry` and
+write `add`, `remove` and `findMatchingAgent`.
 
 ## 5. Event router rules
 
-- Run the router as the server part of a Paseo plugin, as `plugins/paseo-gitlab` and `plugins/paseo-slack`
-  do with `index.server.ts`. Paseo runs it: `paseo plugin ls` shows its status and `paseo plugin logs <id>`
-  shows its logs.
-- Write `daemon-state.json` (`pid`, `running`, `startedAt`, `lastEventAt`, `eventsDispatched`) so
-  the router's health can be read without talking to the process.
-- Reload the registry on every event. A coordinator change must apply to the running router without a
-  restart.
+- Write `daemon-state.json` (`pid`, `running`, `startedAt`, `lastEventAt`, `eventsDispatched`) so the router's
+  health can be read without talking to the process.
+- Reload the registry on every event. A coordinator change applies without a restart.
 - Log one line per event with the target agent. Do not log message content or tokens.
-- Report a failing source to the Coordinator once when it breaks and once when it recovers, as the GitLab
-  adapter does with its health alerts, instead of once per poll.
+- Report a failing source to the Coordinator once when it breaks and once when it recovers, not once per poll.
 - Exit cleanly on `SIGTERM` and remove the state file.
 
 ## 6. Snapshot
 
-Push events only cover what happens while the event router runs. `snapshot` covers what is already waiting.
-
-- Use the platform's own notion of "waiting on me": to-dos, review requests, assignments, unanswered
-  direct messages and mentions.
+- Use the platform's own notion of "waiting on me": to-dos, review requests, assignments, unanswered direct
+  messages and mentions.
 - Resolve the user from the credentials. Do not ask for a user ID.
-- Put raw evidence into `snapshot.state` and leave judgement to the Coordinator.
+- Put each item in the channel shape. Facts the Coordinator needs to verify go into `content`.
 - Report each failing source in `errors` and keep returning the rest. Exit non-zero only when you cannot
   authenticate.
 - Never mark anything as read or done.
 
-Check the output with `<name> snapshot | fleet validate -`.
+## 7. Checklist
 
-## 7. Registration
-
-```bash
-fleet channel add teams:work --tool teams_send_message --cli "teams send" --type chat \
-  --instance <tenant-id> --scope <team-id>
-```
-
-Then add the adapter name to `adapters` in `~/.config/paseo/fleet/config.json`, and ship the event router
-as the server part of a Paseo plugin (section 5).
-
-## 8. Worked mapping: Microsoft Teams
-
-| Contract piece    | Slack                        | GitLab                       | Teams                                                         |
-| ----------------- | ---------------------------- | ---------------------------- | ------------------------------------------------------------- |
-| Event source      | Socket Mode WebSocket        | REST polling                 | Microsoft Graph change notifications, or polling `/me/chats`  |
-| Layer 1 filter    | DMs, mentions, subscriptions | To-dos, pipeline failures    | 1:1 and group chats, `@mention` of the user, subscriptions    |
-| `instance`        | team ID                      | host URL                     | tenant ID                                                     |
-| `scope`           | channel ID                   | project path                 | team or chat ID                                               |
-| `urn`             | `urn:slack:T:C:ts`           | `urn:gitlab:host:path:mr:42` | `urn:teams:tenant:chat:message-id`                            |
-| Subscription keys | channel, thread, sender      | project, target              | chat, thread, sender                                          |
-| Snapshot          | unanswered DMs and mentions  | to-dos, MRs, assigned issues | chats where the last message is not yours and mentions of you |
-| Reply tool        | `slack_send_message`         | `gitlab_create_issue_note`   | `teams_send_message` with `chat_id` and `reply_to`            |
-
-A minimal adapter (see the kit README for the dispatcher and registry) is `bin/teams.js` (the commands in section 1), `src/dispatcher.js` (sections 2 and 3),
-`src/subscriptions.js` (section 4) and `src/snapshot.js` (section 6), with its own tests that fake the
-platform at the network boundary. Tests must never write to the real home directory: set `HOME` to a temp
-directory, as `tools/paseo-fleet/test/isolated-home.mjs` does.
-
-## 9. Checklist
-
-- [ ] The event router runs as the plugin's server part and `paseo plugin ls` shows it running.
 - [ ] `set-coordinator` and `unset-coordinator` persist and clear the ID.
-- [ ] A synthetic event passes `fleet validate -`.
-- [ ] `<name> snapshot | fleet validate -` passes, and an auth failure exits non-zero.
-- [ ] Event IDs are deterministic; a repeated event produces the same `id`.
-- [ ] `reply_action.params` is enough to reply without any other lookup.
+- [ ] Every event passes `createChannelEvent`; a missing `source`, `kind` or `urn` throws.
+- [ ] `<name> snapshot` prints a `paseo-channel/v1` document and an auth failure exits non-zero.
+- [ ] `urn` is deterministic; a repeated event produces the same `urn`.
 - [ ] The adapter name is in `adapters`; `fleet status` lists its plugin status.
 - [ ] Tests run offline and leave the real config untouched.

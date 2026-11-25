@@ -1,3 +1,5 @@
+import { CHANNEL_FORMAT, createChannelEvent } from "paseo-fleet-kit";
+
 const SEARCH_PAGE_SIZE = 100;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -55,25 +57,20 @@ export class SlackSnapshot {
       conversations.get(key).messages.set(message.ts, message);
     }
 
-    const items = [];
+    const dated = [];
     for (const conversation of conversations.values()) {
       const messages = Array.from(conversation.messages.values()).sort((a, b) => Number(a.ts) - Number(b.ts));
       const latest = messages[messages.length - 1];
-      const replyCheck = await this.checkRepliedAfter(conversation, latest.ts, myUserId);
-      if (replyCheck.replied) continue;
-      items.push(this.buildItem({ conversation, messages, latest, teamId, replyCheck }));
+      const replied = await this.checkRepliedAfter(conversation, latest.ts, myUserId);
+      if (replied) continue;
+      dated.push(this.buildItem({ conversation, messages, latest, teamId }));
     }
 
-    items.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
-
     return {
-      protocol: "paseo-fleet/v1",
+      format: CHANNEL_FORMAT,
       source: "slack",
-      instance: teamId,
-      actor: myUserId,
-      since: since.toISOString(),
       generated_at: generatedAt,
-      items,
+      items: dated.sort((a, b) => b.timestamp.localeCompare(a.timestamp)).map((item) => item.event),
       errors: this.errors,
     };
   }
@@ -105,58 +102,38 @@ export class SlackSnapshot {
       const replied = (result.messages || []).some(
         (message) => message.user === myUserId && Number(message.ts) > Number(latestTs),
       );
-      return { replied, verified: true };
+      return replied;
     } catch (err) {
       this.errors.push({ source: `replies:${channelId}`, error: err.message });
-      return { replied: false, verified: false };
+      return false;
     }
   }
 
-  buildItem({ conversation, messages, latest, teamId, replyCheck }) {
+  buildItem({ conversation, messages, latest, teamId }) {
     const channelId = conversation.channel.id;
     const anchorTs = conversation.rootTs || latest.ts;
-    const eventType = conversation.direct ? "dm" : "mention";
-    const replyParams = conversation.rootTs
-      ? { channel: channelId, thread_ts: conversation.rootTs }
-      : { channel: channelId };
+    const kind = conversation.direct ? "dm" : "mention";
     const content = messages
       .slice(-3)
       .map((message) => `<${message.username || message.user}>: ${message.text}`)
       .join("\n");
 
     return {
-      protocol: "paseo-fleet/v1",
-      id: `snap_slack_${teamId}_${channelId}_${anchorTs.replace(".", "_")}`,
       timestamp: new Date(Number(latest.ts) * 1000).toISOString(),
-      source: "slack",
-      instance: teamId,
-      scope: channelId,
-      urn: `urn:slack:${teamId}:${channelId}:${anchorTs}`,
-      event_type: eventType,
-      actor: {
-        id: latest.user || "unknown",
-        name: latest.username || latest.user || "unknown",
-        is_bot: Boolean(latest.bot_id),
-      },
-      target: {
-        type: conversation.rootTs ? "thread" : "channel",
-        id: conversation.rootTs || channelId,
-        channel: channelId,
-        team: teamId,
-        url: latest.permalink || "",
-      },
-      content,
-      reply_action: { type: "mcp", tool: "slack_send_message", params: replyParams },
-      snapshot: {
-        reasons: [conversation.direct ? "unanswered_dm" : "unanswered_mention"],
-        state: {
-          channel_name: conversation.channel.name || null,
-          messages_waiting: messages.length,
-          first_ts: messages[0].ts,
-          latest_ts: latest.ts,
-          reply_check_verified: replyCheck.verified,
+      event: createChannelEvent({
+        content,
+        meta: {
+          source: "slack",
+          kind,
+          urn: `urn:slack:${teamId}:${channelId}:${anchorTs}`,
+          url: latest.permalink,
+          channel: channelId,
+          user: latest.user,
+          ts: latest.ts,
+          thread_ts: conversation.rootTs,
+          team: teamId,
         },
-      },
+      }),
     };
   }
 }

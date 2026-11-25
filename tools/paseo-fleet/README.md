@@ -5,7 +5,7 @@
 [![Tests: node --test](https://img.shields.io/badge/tests-node%20--test-brightgreen.svg)](test)
 [![Code style: Prettier](https://img.shields.io/badge/code%20style-prettier-ff69b4.svg)](https://prettier.io)
 
-Model-agnostic multi-agent fleet skills (**Coordinator**, **Worker**, **Reviewer**) and open event protocol for [Paseo](https://getpaseo.com), Claude Code, and Antigravity.
+Model-agnostic multi-agent fleet skills (**Coordinator**, **Worker**, **Reviewer**) and an event shape for [Paseo](https://getpaseo.com), Claude Code, and Antigravity.
 
 Enables autonomous agent teams to triage incoming events from external channels (Slack, GitLab, GitHub, Telegram), execute implementations in isolated git worktrees, gate on independent adversarial review, and report outcomes seamlessly without hardcoded model or tool dependencies.
 
@@ -18,7 +18,7 @@ Enables autonomous agent teams to triage incoming events from external channels 
                                            │
                                            ▼ (Layer 1 Filter)
                       ┌────────────────────────────────────────┐
-                      │  Paseo Fleet Protocol (Inbound Event)  │
+                      │  Channel event (<channel> tag)         │
                       │  paseo send <coordinator_agent_id>     │
                       └────────────────────┬───────────────────┘
                                            │
@@ -55,11 +55,11 @@ Enables autonomous agent teams to triage incoming events from external channels 
 
 `paseo-fleet` provides three skills:
 
-| Skill | Invocation | Description |
-| --- | --- | --- |
-| **Start Coordinator** | `/start-fleet-coordinator` | Activates the session as coordinator, binds the Slack and GitLab adapters, sweeps what was already waiting, presents a verified plan, then listens for events. |
-| **End Coordinator** | `/end-fleet-coordinator` | Clears the coordinator bindings on the adapters. The router plugins keep running. |
-| **Coordinator** | `skills/coordinator` | How the coordinator triages events, delegates code to Worker agents in worktrees with narrow prompts, gates work with the project's own review, and drafts every outbound action for approval. |
+| Skill                 | Invocation                 | Description                                                                                                                                                                                    |
+| --------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Start Coordinator** | `/start-fleet-coordinator` | Activates the session as coordinator, binds the Slack and GitLab adapters, sweeps what was already waiting, presents a verified plan, then listens for events.                                 |
+| **End Coordinator**   | `/end-fleet-coordinator`   | Clears the coordinator bindings on the adapters. The router plugins keep running.                                                                                                              |
+| **Coordinator**       | `skills/coordinator`       | How the coordinator triages events, delegates code to Worker agents in worktrees with narrow prompts, gates work with the project's own review, and drafts every outbound action for approval. |
 
 Workers are ordinary agents started by the coordinator with a task-specific prompt; review follows the project's
 own rules. The plugin ships no separate Worker or Reviewer skill.
@@ -77,7 +77,7 @@ fleet activate
 # 2. Collect everything that was already waiting on you from every adapter
 fleet sweep
 
-# 3. Check coordinator liveness, channels, and router plugin status
+# 3. Check the coordinator binding and router plugin status
 fleet status
 
 # 4. Unbind the coordinator from the adapters (the router plugins keep running)
@@ -93,7 +93,6 @@ When running inside a Paseo agent session, invoking `/start-fleet-coordinator` a
 3. Binds the ID to the Slack adapter (`slack set-coordinator <id>`).
 4. Binds the ID to the GitLab adapter (`gitlab set-coordinator <id>`).
 5. Enables the `slack` and `gitlab` plugins if they are installed but disabled (`paseo plugin enable <id>`). The event routers run inside Paseo as the server part of these plugins, so activation starts no processes.
-6. Reads `~/.config/paseo/fleet/channels.json` and reports ready channels.
 
 The skill then runs `fleet sweep`, verifies every item against its source, presents a prioritised plan, dispatches Workers for the items that need code, and queues every outbound action (messages, comments, pushes, merge requests) for the user's approval before it starts listening for new events.
 
@@ -101,36 +100,20 @@ The skill then runs `fleet sweep`, verifies every item against its source, prese
 
 ## Multi-Project & Multi-Instance Isolation
 
-The fleet protocol prevents collisions across multiple projects, repositories, and workspaces using explicit routing scopes:
+Every event carries the identity it belongs to in `meta`, so one fleet serves several workspaces, hosts and projects
+without collisions:
 
-```json
-{
-  "channels": {
-    "slack:work": {
-      "type": "chat",
-      "instance": "T0123456789",
-      "scope": null,
-      "mcp_tool": "slack_send_message",
-      "cli_command": "slack send",
-      "description": "Work Slack workspace",
-      "is_primary": true
-    },
-    "gitlab:work": {
-      "type": "forge",
-      "instance": "https://gitlab.example.com",
-      "scope": "team/project",
-      "mcp_tool": "gitlab_create_issue_note",
-      "cli_command": "gitlab comment",
-      "description": "Work GitLab (team/project)"
-    }
-  },
-  "primary_channel": "slack:work"
-}
+```text
+<channel source="slack" kind="dm" urn="urn:slack:T0123456789:D01ABCDEF:1727200000.123" channel="D01ABCDEF" team="T0123456789" thread_ts="1727200000.123" ts="1727200000.123" user="U12345678">
 ```
 
-- **`instance`**: Uniquely identifies the team, tenant, or host (e.g. Slack Team `T0123456789`, GitLab host `https://gitlab.example.com`).
-- **`scope`**: Identifies the specific repository, project, or channel namespace (e.g. `team/project` or `C01DEV`).
-- **`urn`**: Globally unique uniform resource name (`urn:gitlab:gitlab.example.com:team/project:issue:42`), enabling 100% idempotent deduplication across agents.
+- **`team`** and **`project`** (or `channel`): the workspace, host or repository the event came from.
+- **`urn`**: globally unique resource name (`urn:gitlab:gitlab.example.com:team/project:issue:42`). It is the key
+  `fleet sweep` deduplicates by, so one resource reaches the Coordinator once.
+
+The full event shape, the meta keys of each adapter and the snapshot format are in the
+[Paseo Fleet Event Protocol](protocol/fleet-protocol.md). The Claude Code channel model it follows is described in the
+[Channels reference](https://code.claude.com/docs/en/channels-reference).
 
 ---
 
@@ -143,26 +126,13 @@ fleet init
 # Activate current agent ($PASEO_AGENT_ID) as coordinator & enable router plugins
 fleet activate
 
-# Check fleet status, coordinator binding, and router plugin status
+# Check the coordinator binding and router plugin status
 fleet status
 
 # Collect waiting work from every adapter (default: since the last sweep, at least 24h back)
 fleet sweep
 fleet sweep --since 3d --adapters gitlab
 fleet sweep --no-cursor   # do not move the cursor
-
-# Register a push channel provider
-fleet channel add slack:work --tool slack_send_message --cli "slack send" --type chat --instance T0123456789 --primary
-fleet channel add gitlab:work --tool gitlab_create_issue_note --cli "gitlab comment" --type forge --instance https://gitlab.example.com --scope team/project
-
-# Inspect registered channels
-fleet channel ls
-
-# Remove a channel
-fleet channel rm gitlab:work
-
-# Dispatch synthetic test event to verify round-trip delivery
-fleet test-event --channel slack:work
 
 # Unbind coordinator from the adapters (router plugins keep running)
 fleet stop
@@ -178,7 +148,7 @@ Anyone can build custom adapters (e.g. `paseo-telegram`, `paseo-github`, `paseo-
 
 ## Documentation Index
 
-- [**Paseo Fleet Protocol Specification**](protocol/fleet-protocol.md)
+- [**Paseo Fleet Event Protocol**](protocol/fleet-protocol.md)
 - [**Adapter Author Guide**](protocol/author-guide.md)
 - [**Coordinator Skill**](skills/coordinator/SKILL.md)
 - [**Coordinator Startup Sweep**](skills/coordinator/references/startup-sweep.md)

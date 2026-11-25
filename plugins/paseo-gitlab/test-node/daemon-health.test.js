@@ -25,7 +25,10 @@ function tempRegistry() {
 
 function makeDaemon({ registry, thresholdMs = 120_000, clock = fakeClock(), sendToPaseo }) {
   const health = new HealthMonitor({ thresholdMs, now: clock.now });
-  const dispatcher = new GitLabEventDispatcher({ registry, config: {} });
+  const dispatcher = new GitLabEventDispatcher({
+    registry,
+    config: { host: "https://gitlab.example", defaultProjectId: 1 },
+  });
   dispatcher.sendToPaseo = sendToPaseo;
   const daemon = new GitLabDaemon({
     client: {},
@@ -140,7 +143,7 @@ test("recovered message names what recovered and retries if delivery fails first
     thresholdMs: 100,
     sendToPaseo: async (agentId, prompt) => {
       calls.push(prompt);
-      if (prompt.includes("RECOVERED") && failRecovered) {
+      if (prompt.includes('kind="daemon_health_recovered"') && failRecovered) {
         return { success: false, error: "timeout" };
       }
       return { success: true, stdout: "", stderr: "" };
@@ -164,6 +167,6 @@ test("recovered message names what recovered and retries if delivery fails first
   await daemon.handlePollSuccess();
   assert.equal(daemon.health.alertDelivered, false);
 
-  const recoveredPrompt = calls.find((p) => p.includes("RECOVERED"));
+  const recoveredPrompt = calls.find((p) => p.includes('kind="daemon_health_recovered"'));
   assert.match(recoveredPrompt, /pipelines/);
 });

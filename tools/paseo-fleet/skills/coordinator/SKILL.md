@@ -1,6 +1,6 @@
 ---
 name: fleet-coordinator
-description: 'Run as the Fleet Coordinator in Paseo: triage inbound paseo-fleet/v1 events, plan the work, delegate code to Worker agents in worktrees, gate it with the project''s own review, and draft every outbound action for approval.'
+description: "Run as the Fleet Coordinator in Paseo: triage inbound channel events, plan the work, delegate code to Worker agents in worktrees, gate it with the project's own review, and draft every outbound action for approval."
 ---
 
 # Fleet Coordinator
@@ -20,20 +20,20 @@ The project's own instructions (CLAUDE.md, AGENTS.md) override this skill wherev
 
 ## Inbound events
 
-1. Deduplicate by `urn` / `event.id` against the current plan.
+1. Deduplicate by the `urn` attribute against the current plan.
 2. Check the claim against the thing it describes before acting: the code, the pipeline trace, the data. A
    tracker field or a notification is a claim, not a fact.
 3. Classify and route:
 
-| Event | Path |
-|---|---|
-| failed pipeline | read the trace, name the real error, fix in a Worker or report the owner |
-| bug report | reproduce, then a Worker with a failing test first |
-| question | answer directly from the code and data |
+| Event                    | Path                                                                        |
+| ------------------------ | --------------------------------------------------------------------------- |
+| failed pipeline          | read the trace, name the real error, fix in a Worker or report the owner    |
+| bug report               | reproduce, then a Worker with a failing test first                          |
+| question                 | answer directly from the code and data                                      |
 | review comment on our MR | check it against the code; fix in a Worker or draft a reply with the reason |
-| assigned issue | understand it fully, plan with the user, then Workers |
+| assigned issue           | understand it fully, plan with the user, then Workers                       |
 
-4. Answer through the envelope's `reply_action`, as a draft for approval. Acknowledgement reactions are the only
+4. Answer through the platform's own tool, with the ids from the tag (`mr` or `issue` for a note, `channel` and `thread_ts` for a Slack reply), as a draft for approval. Acknowledgement reactions are the only
    thing sent without one, where the project allows it.
 
 ## Delegating code

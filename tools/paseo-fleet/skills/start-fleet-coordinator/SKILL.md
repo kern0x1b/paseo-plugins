@@ -2,7 +2,7 @@
 name: start-fleet-coordinator
 description: 'Start the Fleet Coordinator session: binds your agent ID, enables the GitLab and Slack router plugins, sweeps every adapter for work that was already waiting, verifies it, presents a prioritised plan, dispatches workers, and then listens for inbound fleet events.'
 user-invocable: true
-argument-hint: "[--since <iso|24h|3d>]"
+argument-hint: '[--since <iso|24h|3d>]'
 ---
 
 # Start Fleet Coordinator
@@ -17,7 +17,7 @@ Activate the current Paseo agent session as the Fleet Coordinator, catch up on e
 fleet activate
 ```
 
-This registers `$PASEO_AGENT_ID` as the coordinator, binds it to every adapter, enables the adapter plugins that are installed but disabled, and lists the registered channels.
+This registers `$PASEO_AGENT_ID` as the coordinator, binds it to every adapter, and enables the adapter plugins that are installed but disabled.
 
 The event routers only report events that happen after they start. Work that was already waiting is not pushed; step 2 collects it.
 
@@ -27,10 +27,10 @@ The event routers only report events that happen after they start. Work that was
 fleet sweep
 ```
 
-Pass the user's `--since` argument through if one was given. The command prints one `paseo-fleet/v1` sweep document:
+Pass the user's `--since` argument through if one was given. The command prints one sweep document in the `paseo-channel/v1` format:
 
 - `sources`: every adapter that was asked, whether it answered, and which identity it ran as.
-- `items`: deduplicated envelopes, each with a `reply_action` and a `snapshot` block (`reasons` and raw `state`).
+- `items`: deduplicated channel events (`content` and `meta`), unique by `meta.urn`.
 - `errors`: everything that could not be read. Report these to the user; never present a partial sweep as complete.
 
 The sweep is the starting list, not the boundary. Use the adapters' CLI and MCP tools for anything an item needs beyond it.
@@ -48,4 +48,4 @@ Within the Authority Rules of the [coordinator skill](../coordinator/SKILL.md):
 
 ## 5. Listen
 
-Report the coordinator ID, plugin status from `fleet status`, active channels, the plan, and what was dispatched. Then process inbound `paseo-fleet/v1` envelopes as they arrive, deduplicating them by `urn` against the items already in the plan.
+Report the coordinator ID, plugin status from `fleet status`, the plan, and what was dispatched. Then process inbound channel events as they arrive, deduplicating them by `urn` against the items already in the plan.

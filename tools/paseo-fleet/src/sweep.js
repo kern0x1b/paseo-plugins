@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { CHANNEL_FORMAT, mergeChannelEventsByUrn, validateSnapshotDocument } from 'paseo-fleet-kit';
 
 const execFileAsync = promisify(execFile);
 
@@ -39,30 +40,14 @@ export async function runAdapterSnapshot(adapter, since) {
   return JSON.parse(stdout);
 }
 
-export function mergeItemsByUrn(items) {
-  const itemsByKey = new Map();
-  for (const item of items) {
-    const key = item.urn || item.id;
-    const existing = itemsByKey.get(key);
-    if (!existing) {
-      itemsByKey.set(key, item);
-      continue;
-    }
-    const reasons = new Set([...(existing.snapshot?.reasons || []), ...(item.snapshot?.reasons || [])]);
-    existing.snapshot = { ...(existing.snapshot || {}), reasons: Array.from(reasons) };
-  }
-  return Array.from(itemsByKey.values()).sort((a, b) =>
-    String(b.timestamp).localeCompare(String(a.timestamp)),
-  );
-}
-
 export async function runSweep({ adapters = DEFAULT_ADAPTERS, since, snapshotRunner = runAdapterSnapshot }) {
   const startedAt = new Date().toISOString();
   const results = await Promise.all(
     adapters.map(async (adapter) => {
       try {
         const snapshot = await snapshotRunner(adapter, since);
-        return { adapter, snapshot };
+        const check = validateSnapshotDocument(snapshot);
+        return check.valid ? { adapter, snapshot } : { adapter, error: check.error };
       } catch (err) {
         return { adapter, error: err.message };
       }
@@ -73,35 +58,25 @@ export async function runSweep({ adapters = DEFAULT_ADAPTERS, since, snapshotRun
   const errors = [];
   const items = [];
   for (const result of results) {
-    if (!result.error && !Array.isArray(result.snapshot?.items)) {
-      result.error = 'snapshot has no items array';
-    }
     if (result.error) {
       sources.push({ adapter: result.adapter, ok: false, items: 0 });
       errors.push({ source: result.adapter, error: result.error });
       continue;
     }
-    const snapshotItems = result.snapshot.items;
-    sources.push({
-      adapter: result.adapter,
-      ok: true,
-      items: snapshotItems.length,
-      instance: result.snapshot?.instance || null,
-      actor: result.snapshot?.actor || null,
-    });
-    items.push(...snapshotItems);
-    for (const error of result.snapshot?.errors || []) {
+    sources.push({ adapter: result.adapter, ok: true, items: result.snapshot.items.length });
+    items.push(...result.snapshot.items);
+    for (const error of result.snapshot.errors) {
       errors.push({ source: `${result.adapter}:${error.source}`, error: error.error });
     }
   }
 
   return {
-    protocol: 'paseo-fleet/v1',
+    format: CHANNEL_FORMAT,
     kind: 'sweep',
     started_at: startedAt,
     since: since.toISOString(),
     sources,
-    items: mergeItemsByUrn(items),
+    items: mergeChannelEventsByUrn(items),
     errors,
   };
 }

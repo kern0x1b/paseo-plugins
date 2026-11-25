@@ -19,7 +19,7 @@ The repository provides three complementary interfaces:
 
 ## Agent Fleet Coordination & Event Router
 
-The event router runs inside Paseo as the server part of the `gitlab` plugin. It polls GitLab every two minutes and sends the new events of each poll to a Paseo agent as one message. An archived agent loses its subscriptions.
+The event router runs inside Paseo as the server part of the `gitlab` plugin. It polls GitLab every two minutes and sends the new events of each poll to a Paseo agent, one channel tag per event. An archived agent loses its subscriptions.
 
 ### 1. Subscription Routing
 

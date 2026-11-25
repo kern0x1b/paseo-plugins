@@ -1,4 +1,11 @@
-const MR_ROLE_EVENT_TYPES = {
+import {
+  CHANNEL_FORMAT,
+  createChannelEvent,
+  mergeChannelEventsByUrn,
+  requireChannelValue,
+} from "paseo-fleet-kit";
+
+const MR_ROLE_KINDS = {
   reviewer: "mr_review_requested",
   assignee: "mr_assigned",
   author: "mr_authored",
@@ -6,11 +13,6 @@ const MR_ROLE_EVENT_TYPES = {
 
 function projectPathFromReference(reference) {
   return reference ? reference.replace(/[!#]\d+$/, "") : null;
-}
-
-function isBotUser(user) {
-  const username = user?.username || "";
-  return Boolean(user?.bot) || username.includes("bot");
 }
 
 export class GitLabSnapshot {
@@ -37,21 +39,6 @@ export class GitLabSnapshot {
       this.fetchList("assigned_issues", () => this.client.getOpenedIssues({ assigneeUsername: username })),
     ]);
 
-    const itemsByUrn = new Map();
-    const addItem = (item) => {
-      const existing = itemsByUrn.get(item.urn);
-      if (existing) {
-        existing.snapshot.reasons.push(...item.snapshot.reasons);
-        for (const [key, value] of Object.entries(item.snapshot.state)) {
-          const current = existing.snapshot.state[key];
-          existing.snapshot.state[key] =
-            Array.isArray(current) && Array.isArray(value) ? [...current, ...value] : (current ?? value);
-        }
-      } else {
-        itemsByUrn.set(item.urn, item);
-      }
-    };
-
     const mrRoles = new Map();
     for (const [role, list] of [
       ["reviewer", reviewerMrs],
@@ -68,19 +55,19 @@ export class GitLabSnapshot {
     const mrItems = await Promise.all(
       Array.from(mrRoles.values()).map(({ mr, roles }) => this.buildMergeRequestItem(mr, roles)),
     );
-    mrItems.forEach(addItem);
-    assignedIssues.map((issue) => this.buildIssueItem(issue)).forEach(addItem);
-    todos.map((todo) => this.buildTodoItem(todo)).forEach(addItem);
-
-    const items = Array.from(itemsByUrn.values()).sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+    const dated = [
+      ...mrItems,
+      ...assignedIssues.map((issue) => this.buildIssueItem(issue)),
+      ...todos.map((todo) => this.buildTodoItem(todo)),
+    ];
 
     return {
-      protocol: "paseo-fleet/v1",
+      format: CHANNEL_FORMAT,
       source: "gitlab",
-      instance: this.client.host,
-      actor: username,
       generated_at: generatedAt,
-      items,
+      items: mergeChannelEventsByUrn(
+        dated.sort((a, b) => b.timestamp.localeCompare(a.timestamp)).map((item) => item.event),
+      ),
       errors: this.errors,
     };
   }
@@ -109,55 +96,22 @@ export class GitLabSnapshot {
     return `urn:gitlab:${this.cleanHost}:${projectPath}:${targetType}:${targetId}`;
   }
 
-  buildItem({
-    projectPath,
-    targetType,
-    targetId,
-    eventType,
-    author,
-    title,
-    url,
-    timestamp,
-    content,
-    replyAction,
-    reasons,
-    state,
-  }) {
-    const urn = this.buildUrn(projectPath, targetType, targetId);
+  buildItem({ projectPath, targetType, targetId, kind, author, title, url, timestamp, content, meta = {} }) {
     return {
-      protocol: "paseo-fleet/v1",
-      id: `snap_gl_${urn.replace(/[^a-zA-Z0-9]+/g, "_")}`,
       timestamp: timestamp || new Date().toISOString(),
-      source: "gitlab",
-      instance: this.client.host,
-      scope: projectPath,
-      urn,
-      event_type: eventType,
-      actor: {
-        id: author?.username || "unknown",
-        name: author?.name || author?.username || "unknown",
-        is_bot: isBotUser(author),
-      },
-      target: { type: targetType, id: String(targetId), title: title || "", url: url || "" },
-      content,
-      reply_action: replyAction,
-      snapshot: { reasons, state },
-    };
-  }
-
-  mergeRequestReplyAction(projectId, mrIid) {
-    return {
-      type: "mcp",
-      tool: "gitlab_create_mr_note",
-      params: { project_id: projectId, mr_iid: Number(mrIid) },
-    };
-  }
-
-  issueReplyAction(projectId, issueIid) {
-    return {
-      type: "mcp",
-      tool: "gitlab_create_issue_note",
-      params: { project_id: projectId, issue_iid: Number(issueIid) },
+      event: createChannelEvent({
+        content,
+        meta: {
+          source: "gitlab",
+          kind,
+          urn: this.buildUrn(projectPath, targetType, targetId),
+          url,
+          author: author?.username,
+          title,
+          project: projectPath,
+          ...meta,
+        },
+      }),
     };
   }
 
@@ -176,29 +130,15 @@ export class GitLabSnapshot {
     const pipeline = merged.head_pipeline || merged.pipeline || null;
     const approvedBy = (approvals?.approved_by || []).map((entry) => entry.user?.username).filter(Boolean);
     const projectPath = projectPathFromReference(merged.references?.full) || String(mr.project_id);
-
-    const state = {
-      roles,
-      draft: Boolean(merged.draft || merged.work_in_progress),
-      detailed_merge_status: merged.detailed_merge_status || merged.merge_status || null,
-      has_conflicts: Boolean(merged.has_conflicts),
-      pipeline: pipeline ? { id: pipeline.id, status: pipeline.status, url: pipeline.web_url } : null,
-      approved_by: approvedBy,
-      approvals_left: approvals?.approvals_left ?? null,
-      reviewers: (merged.reviewers || []).map((reviewer) => reviewer.username),
-      user_notes_count: merged.user_notes_count ?? null,
-      source_branch: merged.source_branch,
-      target_branch: merged.target_branch,
-      updated_at: merged.updated_at,
-      details_verified: Boolean(details),
-    };
+    const draft = Boolean(merged.draft || merged.work_in_progress);
+    const detailedMergeStatus = merged.detailed_merge_status || merged.merge_status || null;
 
     const facts = [
       `roles: ${roles.join(", ")}`,
-      state.draft ? "draft" : null,
-      state.pipeline ? `pipeline ${state.pipeline.status}` : "no pipeline",
-      state.detailed_merge_status ? `merge status ${state.detailed_merge_status}` : null,
-      state.has_conflicts ? "has conflicts" : null,
+      draft ? "draft" : null,
+      pipeline ? `pipeline ${pipeline.status}` : "no pipeline",
+      detailedMergeStatus ? `merge status ${detailedMergeStatus}` : null,
+      merged.has_conflicts ? "has conflicts" : null,
       `approved by: ${approvedBy.join(", ") || "nobody"}`,
     ].filter(Boolean);
 
@@ -206,15 +146,13 @@ export class GitLabSnapshot {
       projectPath,
       targetType: "mr",
       targetId: mr.iid,
-      eventType: MR_ROLE_EVENT_TYPES[roles[0]],
+      kind: MR_ROLE_KINDS[roles[0]],
       author: merged.author,
       title: merged.title,
       url: merged.web_url,
       timestamp: merged.updated_at,
       content: `MR !${mr.iid} "${merged.title}" (${facts.join("; ")})`,
-      replyAction: this.mergeRequestReplyAction(mr.project_id, mr.iid),
-      reasons: roles.map((role) => `mr_${role}`),
-      state,
+      meta: { mr: mr.iid, pipeline: pipeline?.id },
     });
   }
 
@@ -225,26 +163,19 @@ export class GitLabSnapshot {
       projectPath,
       targetType: "issue",
       targetId: issue.iid,
-      eventType: "issue_assigned",
+      kind: "issue_assigned",
       author: issue.author,
       title: issue.title,
       url: issue.web_url,
       timestamp: issue.updated_at,
       content: `Issue #${issue.iid} "${issue.title}"${labels.length ? ` (labels: ${labels.join(", ")})` : ""}`,
-      replyAction: this.issueReplyAction(issue.project_id, issue.iid),
-      reasons: ["issue_assignee"],
-      state: {
-        labels,
-        milestone: issue.milestone?.title || null,
-        due_date: issue.due_date || null,
-        user_notes_count: issue.user_notes_count ?? null,
-        updated_at: issue.updated_at,
-      },
+      meta: { issue: issue.iid },
     });
   }
 
   buildTodoItem(todo) {
-    const projectPath = todo.project?.path_with_namespace || String(todo.project?.id || "unknown");
+    const projectPath =
+      todo.project?.path_with_namespace || String(requireChannelValue(todo.project?.id, "todo project"));
     const isMergeRequest = todo.target_type === "MergeRequest";
     const isIssue = todo.target_type === "Issue";
     const targetType = isMergeRequest
@@ -253,28 +184,21 @@ export class GitLabSnapshot {
         ? "issue"
         : String(todo.target_type || "todo").toLowerCase();
     const targetId = todo.target?.iid ?? todo.target?.id ?? todo.id;
-    const projectId = todo.project?.id;
-
-    let replyAction = { type: "none" };
-    if (isMergeRequest && projectId) replyAction = this.mergeRequestReplyAction(projectId, targetId);
-    if (isIssue && projectId) replyAction = this.issueReplyAction(projectId, targetId);
 
     return this.buildItem({
       projectPath,
       targetType,
       targetId,
-      eventType: `todo_${todo.action_name}`,
+      kind: `todo_${todo.action_name}`,
       author: todo.author,
       title: todo.target?.title || "",
       url: todo.target_url,
       timestamp: todo.updated_at || todo.created_at,
       content: `To-do (${todo.action_name}) by @${todo.author?.username || "unknown"}: ${todo.body || todo.target?.title || ""}`,
-      replyAction,
-      reasons: [`todo_${todo.action_name}`],
-      state: {
-        todo_ids: [todo.id],
-        todo_action: todo.action_name,
-        todo_body: todo.body || null,
+      meta: {
+        todo: todo.id,
+        mr: isMergeRequest ? targetId : undefined,
+        issue: isIssue ? targetId : undefined,
       },
     });
   }

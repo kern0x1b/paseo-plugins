@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { validateSnapshotDocument } from "paseo-fleet-kit";
 import { GitLabSnapshot } from "../server/router/snapshot.js";
 
 function createFakeClient({ failing = [] } = {}) {
@@ -66,19 +67,18 @@ function createFakeClient({ failing = [] } = {}) {
 test("GitLabSnapshot merges a review to-do into the merge request it points at", async () => {
   const snapshot = await new GitLabSnapshot({ client: createFakeClient() }).collect();
 
-  assert.equal(snapshot.protocol, "paseo-fleet/v1");
+  assert.equal(snapshot.format, "paseo-channel/v1");
   assert.equal(snapshot.source, "gitlab");
-  assert.equal(snapshot.actor, "me.user");
+  assert.deepEqual(validateSnapshotDocument(snapshot), { valid: true });
   assert.equal(snapshot.items.length, 2);
 
-  const mergeRequestItem = snapshot.items.find((item) => item.target.type === "mr");
-  assert.equal(mergeRequestItem.urn, "urn:gitlab:gitlab.example.com:core/backend:mr:42");
-  assert.equal(mergeRequestItem.event_type, "mr_review_requested");
-  assert.deepEqual(mergeRequestItem.snapshot.reasons, ["mr_reviewer", "todo_review_requested"]);
-  assert.equal(mergeRequestItem.snapshot.state.pipeline.status, "failed");
-  assert.deepEqual(mergeRequestItem.snapshot.state.todo_ids, [900]);
-  assert.equal(mergeRequestItem.reply_action.tool, "gitlab_create_mr_note");
-  assert.equal(mergeRequestItem.reply_action.params.mr_iid, 42);
+  const mergeRequestItem = snapshot.items.find((item) => item.meta.mr === "42");
+  assert.equal(mergeRequestItem.meta.urn, "urn:gitlab:gitlab.example.com:core/backend:mr:42");
+  assert.equal(mergeRequestItem.meta.kind, "mr_review_requested");
+  assert.equal(mergeRequestItem.meta.pipeline, "77");
+  assert.equal(mergeRequestItem.meta.todo, "900");
+  assert.match(mergeRequestItem.content, /pipeline failed/);
+  assert.equal("reply_action" in mergeRequestItem, false);
 });
 
 test("GitLabSnapshot keeps the other sources when one of them fails", async () => {
@@ -86,7 +86,8 @@ test("GitLabSnapshot keeps the other sources when one of them fails", async () =
 
   assert.deepEqual(snapshot.errors, [{ source: "todos", error: "todos unavailable" }]);
   assert.equal(snapshot.items.length, 2);
-  const issueItem = snapshot.items.find((item) => item.target.type === "issue");
-  assert.equal(issueItem.event_type, "issue_assigned");
-  assert.deepEqual(issueItem.snapshot.state.labels, ["bug"]);
+  const issueItem = snapshot.items.find((item) => item.meta.issue === "5");
+  assert.equal(issueItem.meta.kind, "issue_assigned");
+  assert.equal(issueItem.meta.author, "qa.user");
+  assert.match(issueItem.content, /labels: bug/);
 });

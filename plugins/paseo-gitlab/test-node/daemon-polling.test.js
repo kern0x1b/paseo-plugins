@@ -32,7 +32,11 @@ function tempStateFile(state) {
 
 function makeDaemon({ client, sendToPaseo, initRetryMs, scope, stateFile = tempStateFile() }) {
   const registry = tempRegistry();
-  const dispatcher = new GitLabEventDispatcher({ registry, config: {} });
+  const dispatcher = new GitLabEventDispatcher({
+    registry,
+    config: { host: "https://gitlab.example", defaultProjectId: 1 },
+    scope,
+  });
   const sent = [];
   dispatcher.sendToPaseo = async (agentId, text) => {
     sent.push(text);
@@ -71,7 +75,8 @@ test("events beyond the first page are fetched and delivered oldest first", asyn
   assert.equal(result.success, true);
   assert.deepEqual(pages, [1, 2]);
   assert.equal(sent.length, 1, "one poll sends one message");
-  assert.match(sent[0], /^\[GitLab\] 102 new events/);
+  assert.equal(sent[0].split("<channel ").length - 1, 102);
+  assert.match(sent[0], /^<channel source="gitlab" kind="commented_on" /);
   assert.ok(sent[0].indexOf("comment 199") < sent[0].indexOf("comment 300"), "oldest first");
   assert.ok(!sent[0].includes("comment 150"), "an event seen before is not sent again");
 });
@@ -196,13 +201,13 @@ test("everyone else's events skip mine and mine skip theirs", async () => {
     },
   };
   const others = makeDaemon({ client, scope: "others" });
-  others.daemon.dispatcher.label = "GitLab, other people's events";
 
   await others.daemon.checkEvents();
   await others.daemon.deliverQueuedEvents();
 
   assert.equal(others.sent.length, 1);
-  assert.match(others.sent[0], /^\[GitLab, other people's events\] 1 new event/);
+  assert.equal(others.sent[0].split("<channel ").length - 1, 1);
+  assert.match(others.sent[0], /scope="others"/);
   assert.match(others.sent[0], /!999 commented on by @someone/);
   assert.ok(!others.sent[0].includes("comment 31"), "my own MR stays out of everyone else's events");
   assert.ok(others.sent[0].includes("x".repeat(300) + "…"), "long bodies of other people's events are cut");

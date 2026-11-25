@@ -9,7 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `fleet validate [file|-]`: checks an event envelope or a snapshot document against the protocol.
 - Adapter author guide rewritten as the full adapter contract, with a Microsoft Teams mapping.
 - `fleet sweep`: collects `snapshot` output from every adapter, merges items by `urn`, and keeps a cursor (`lastSweepAt`) with a 24-hour minimum lookback.
 - Snapshot (pull) contract in the protocol specification and the adapter author guide.
@@ -17,13 +16,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- `fleet channel add`, `fleet channel rm`, `fleet channel ls` and the channels registry (`~/.config/paseo/fleet/channels.json`). Adapters are the only sources.
+- `fleet test-event`.
+- `protocol/schema/` and `protocol/examples/`: the event is described in `protocol/fleet-protocol.md`.
+- The `reply_action` field of events and snapshot items. Replies go through the platform's own tool, with the ids from the event meta.
 - `skills/worker`, `skills/reviewer` and `skills/fleet-setup`: Workers get a task-specific prompt from the coordinator, review follows the project's own rules, and setup is done by `fleet activate`.
 - Coordinator references `triage-matrix.md` and `dispatch-lifecycle.md`, folded into the coordinator skill.
 
 ### Changed
 
 - Coordinator skill rewritten around how the fleet actually works: verify claims before acting, narrow Worker prompts, the project's own review gate, approval for every outbound action.
-- The protocol helpers (`createEventEnvelope`, `validateEventEnvelope`, `validateSnapshotDocument`) now live in `paseo-fleet-kit` and are re-exported from here.
+- Events use the Claude Code Channels shape: `{ content, meta }` with `source`, `kind` and `urn` in `meta`, delivered as a `<channel>` tag. The snapshot document format is `paseo-channel/v1`. See [fleet-protocol.md](protocol/fleet-protocol.md) and [Channels reference](https://code.claude.com/docs/en/channels-reference).
+- `fleet sweep` merges items by `meta.urn` and refuses a snapshot that is not in the `paseo-channel/v1` format.
+- Adapter author guide and protocol specification rewritten for the channel shape.
+- `fleet activate` and `fleet status` no longer print channels; they report the coordinator and the adapter plugins only.
 - `start-fleet-coordinator` sweeps, verifies and plans waiting work before listening for events.
 - Coordinator Authority Rules: outbound writes (messages, comments, pushes, merge requests, merges) require explicit user approval of the draft.
 - `fleet activate`, `stop`, `status` and `coordinator set` drive every adapter in `config.adapters` instead of hardcoded Slack and GitLab; extra daemon flags go in `adapterDaemonArgs`.

@@ -42,10 +42,11 @@ test("SlackSnapshot groups unanswered direct messages per conversation", async (
 
   assert.equal(snapshot.items.length, 1);
   const [item] = snapshot.items;
-  assert.equal(item.event_type, "dm");
-  assert.equal(item.urn, "urn:slack:T_TEAM:D_DM:1790900100.000100");
-  assert.equal(item.snapshot.state.messages_waiting, 2);
-  assert.deepEqual(item.reply_action.params, { channel: "D_DM" });
+  assert.equal(snapshot.format, "paseo-channel/v1");
+  assert.equal(item.meta.kind, "dm");
+  assert.equal(item.meta.urn, "urn:slack:T_TEAM:D_DM:1790900100.000100");
+  assert.equal(item.meta.channel, "D_DM");
+  assert.equal("thread_ts" in item.meta, false);
   assert.match(item.content, /first\n<u_peer>: second/);
 });
 
@@ -79,7 +80,8 @@ test("SlackSnapshot answers channel mentions in their thread and skips messages 
 
   assert.equal(snapshot.items.length, 1);
   const [item] = snapshot.items;
-  assert.equal(item.event_type, "mention");
-  assert.equal(item.target.type, "thread");
-  assert.deepEqual(item.reply_action.params, { channel: "C_DEV", thread_ts: "1790900000.000100" });
+  assert.equal(item.meta.kind, "mention");
+  assert.equal(item.meta.channel, "C_DEV");
+  assert.equal(item.meta.thread_ts, "1790900000.000100");
+  assert.equal(item.meta.url, threadPermalink);
 });

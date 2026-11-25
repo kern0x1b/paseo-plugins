@@ -13,16 +13,15 @@ external push event sources (e.g. `paseo-slack`, `paseo-gitlab`, `paseo-github`,
 
 ## Layout
 
-| Path                              | Purpose                                                                                     |
-| --------------------------------- | ------------------------------------------------------------------------------------------- |
-| `protocol/`                       | Open Fleet Event Protocol specification, JSON schemas, author guide, and envelope examples. |
-| `skills/start-fleet-coordinator/` | One-touch user skill to self-activate coordinator session and enable router plugins.        |
-| `skills/end-fleet-coordinator/`   | One-touch user skill to clear coordinator bindings on the adapters.                         |
-| `skills/coordinator/`             | Fleet Coordinator skill: triage, delegation to Workers, approval rules, startup sweep.      |
-| `bin/fleet.js`                    | Executable CLI for fleet initialization, channel registration, and status checks.           |
-| `src/config.js`                   | Safe manager for `~/.config/paseo/fleet/` configuration and channels registry.              |
-| `src/protocol.js`                 | Standard envelope factory and schema validation.                                            |
-| `test/`                           | Automated test suite run via `node --test test/`.                                           |
+| Path                              | Purpose                                                                                 |
+| --------------------------------- | --------------------------------------------------------------------------------------- |
+| `protocol/`                       | Fleet event protocol (channel shape), snapshot format, and the adapter author guide.    |
+| `skills/start-fleet-coordinator/` | One-touch user skill to self-activate coordinator session and enable router plugins.    |
+| `skills/end-fleet-coordinator/`   | One-touch user skill to clear coordinator bindings on the adapters.                     |
+| `skills/coordinator/`             | Fleet Coordinator skill: triage, delegation to Workers, approval rules, startup sweep.  |
+| `bin/fleet.js`                    | Executable CLI for fleet initialization, coordinator binding, sweep, and status checks. |
+| `src/config.js`                   | Safe manager for the `~/.config/paseo/fleet/config.json` configuration.                 |
+| `test/`                           | Automated test suite run via `node --test test/`.                                       |
 
 ## Commands
 
@@ -46,6 +45,6 @@ npm run format:check # prettier --check .
 
 - **Model & Provider Agnosticism.** Role skills must never hardcode specific model names or providers (`gpt-*`, `claude-*`, `gemini-*`).
 - **No Tool Name Collisions.** Every channel retains its natural distinct tool name (`slack_send_message`, `gitlab_add_note`). Never reuse identical tool names across adapters.
-- **Self-Describing Reply Actions.** Inbound events must contain an explicit `reply_action` detailing the target tool or command.
+- **Channel-shaped events.** Every event is `{ content, meta }` with `source`, `kind` and `urn` in `meta`. Adapters never fill in defaults for a missing value.
 - **Independent Quality Gate.** The Reviewer agent must never be merged with the Worker; independent evaluation prevents author bias.
 - **No personal data.** Never commit real usernames, private company URLs, tokens, or local home paths.

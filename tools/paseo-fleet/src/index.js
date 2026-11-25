@@ -1,20 +1,11 @@
-export {
-  getFleetDir,
-  getConfigPath,
-  getChannelsPath,
-  ensureFleetDir,
-  loadConfig,
-  saveConfig,
-  loadChannels,
-  saveChannels,
-  addChannel,
-  removeChannel,
-} from './config.js';
+export { getFleetDir, getConfigPath, ensureFleetDir, loadConfig, saveConfig } from './config.js';
 
 export {
-  PROTOCOL_VERSION,
-  createEventEnvelope,
-  validateEventEnvelope,
+  CHANNEL_FORMAT,
+  createChannelEvent,
+  renderChannelEvent,
+  validateChannelEvent,
+  mergeChannelEventsByUrn,
   validateSnapshotDocument,
 } from 'paseo-fleet-kit';
 
@@ -26,4 +17,4 @@ export {
   enableRouter,
 } from './adapters.js';
 
-export { DEFAULT_ADAPTERS, parseSince, resolveSweepSince, mergeItemsByUrn, runSweep } from './sweep.js';
+export { DEFAULT_ADAPTERS, parseSince, resolveSweepSince, runSweep } from './sweep.js';

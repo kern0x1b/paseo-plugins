@@ -1,8 +1,22 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { mergeItemsByUrn, parseSince, resolveSweepSince, runSweep } from '../src/sweep.js';
+import { parseSince, resolveSweepSince, runSweep } from '../src/sweep.js';
 
 const now = new Date('2026-10-02T12:00:00Z');
+
+function snapshotOf(source, items, errors = []) {
+  return {
+    format: 'paseo-channel/v1',
+    source,
+    generated_at: '2026-10-02T12:00:00.000Z',
+    items,
+    errors,
+  };
+}
+
+function eventOf(source, urn, content = 'text', extraMeta = {}) {
+  return { content, meta: { source, kind: 'dm', urn, ...extraMeta } };
+}
 
 describe('Fleet sweep', () => {
   it('parses durations and ISO timestamps for --since', () => {
@@ -24,15 +38,24 @@ describe('Fleet sweep', () => {
     );
   });
 
-  it('merges items with the same urn and keeps every reason', () => {
-    const merged = mergeItemsByUrn([
-      { urn: 'urn:x:1', timestamp: '2026-10-01T00:00:00Z', snapshot: { reasons: ['a'] } },
-      { urn: 'urn:x:1', timestamp: '2026-10-01T00:00:00Z', snapshot: { reasons: ['b', 'a'] } },
-      { urn: 'urn:x:2', timestamp: '2026-10-02T00:00:00Z', snapshot: { reasons: ['c'] } },
-    ]);
-    assert.equal(merged.length, 2);
-    assert.equal(merged[0].urn, 'urn:x:2');
-    assert.deepEqual(merged[1].snapshot.reasons, ['a', 'b']);
+  it('merges events with the same urn into one event and keeps every distinct content line', async () => {
+    const sweep = await runSweep({
+      adapters: ['chat'],
+      since: now,
+      snapshotRunner: async () =>
+        snapshotOf('chat', [
+          eventOf('chat', 'urn:chat:1', 'first line'),
+          eventOf('chat', 'urn:chat:1', 'first line\nsecond line', { thread_ts: '1.2' }),
+          eventOf('chat', 'urn:chat:2', 'other'),
+        ]),
+    });
+
+    assert.equal(sweep.items.length, 2);
+    assert.deepEqual(sweep.items[0], {
+      content: 'first line\nsecond line',
+      meta: { source: 'chat', kind: 'dm', urn: 'urn:chat:1', thread_ts: '1.2' },
+    });
+    assert.equal(sweep.items[1].meta.urn, 'urn:chat:2');
   });
 
   it('reports a failing adapter without losing the others', async () => {
@@ -43,12 +66,11 @@ describe('Fleet sweep', () => {
       snapshotRunner: async (adapter, since) => {
         calls.push([adapter, since.toISOString()]);
         if (adapter === 'forge') throw new Error('command not found');
-        return {
-          instance: 'T1',
-          actor: 'me',
-          items: [{ urn: 'urn:chat:1', timestamp: '2026-10-02T00:00:00Z', snapshot: { reasons: ['dm'] } }],
-          errors: [{ source: 'mentions', error: 'rate limited' }],
-        };
+        return snapshotOf(
+          'chat',
+          [eventOf('chat', 'urn:chat:1')],
+          [{ source: 'mentions', error: 'rate limited' }],
+        );
       },
     });
 
@@ -58,12 +80,34 @@ describe('Fleet sweep', () => {
     ]);
     assert.equal(sweep.items.length, 1);
     assert.deepEqual(sweep.sources, [
-      { adapter: 'chat', ok: true, items: 1, instance: 'T1', actor: 'me' },
+      { adapter: 'chat', ok: true, items: 1 },
       { adapter: 'forge', ok: false, items: 0 },
     ]);
     assert.deepEqual(sweep.errors, [
       { source: 'chat:mentions', error: 'rate limited' },
       { source: 'forge', error: 'command not found' },
     ]);
+  });
+
+  it('refuses a snapshot that is not in the channel format instead of reading it', async () => {
+    const sweep = await runSweep({
+      adapters: ['chat'],
+      since: now,
+      snapshotRunner: async () => ({ protocol: 'paseo-fleet/v1', source: 'chat', items: [] }),
+    });
+
+    assert.deepEqual(sweep.sources, [{ adapter: 'chat', ok: false, items: 0 }]);
+    assert.deepEqual(sweep.errors, [{ source: 'chat', error: 'Invalid format: expected paseo-channel/v1' }]);
+  });
+
+  it('writes the sweep document in the channel format', async () => {
+    const sweep = await runSweep({
+      adapters: ['chat'],
+      since: now,
+      snapshotRunner: async () => snapshotOf('chat', []),
+    });
+    assert.equal(sweep.format, 'paseo-channel/v1');
+    assert.equal(sweep.kind, 'sweep');
+    assert.deepEqual(sweep.items, []);
   });
 });

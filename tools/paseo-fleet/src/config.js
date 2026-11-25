@@ -4,7 +4,6 @@ import os from 'node:os';
 
 const FLEET_DIR = path.join(os.homedir(), '.config', 'paseo', 'fleet');
 const CONFIG_FILE = path.join(FLEET_DIR, 'config.json');
-const CHANNELS_FILE = path.join(FLEET_DIR, 'channels.json');
 
 export function getFleetDir() {
   return FLEET_DIR;
@@ -12,10 +11,6 @@ export function getFleetDir() {
 
 export function getConfigPath() {
   return CONFIG_FILE;
-}
-
-export function getChannelsPath() {
-  return CHANNELS_FILE;
 }
 
 function readJson(filePath) {
@@ -45,53 +40,4 @@ export function saveConfig(updates) {
   const merged = { ...current, ...updates };
   fs.writeFileSync(CONFIG_FILE, JSON.stringify(merged, null, 2), 'utf8');
   return merged;
-}
-
-export function loadChannels() {
-  ensureFleetDir();
-  if (fs.existsSync(CHANNELS_FILE)) return readJson(CHANNELS_FILE);
-  return { version: '1.0', channels: {} };
-}
-
-export function saveChannels(manifest) {
-  ensureFleetDir();
-  fs.writeFileSync(CHANNELS_FILE, JSON.stringify(manifest, null, 2), 'utf8');
-  return manifest;
-}
-
-export function addChannel(name, options) {
-  const manifest = loadChannels();
-  if (!manifest.channels) {
-    manifest.channels = {};
-  }
-
-  manifest.channels[name] = {
-    type: options.type || 'chat',
-    mcp_tool: options.mcp_tool || null,
-    cli_command: options.cli_command || null,
-    instance: options.instance || null,
-    scope: options.scope || null,
-    description: options.description || null,
-    default_target: options.default_target || null,
-    capabilities: options.capabilities || [],
-  };
-
-  if (options.is_primary) {
-    manifest.primary_channel = name;
-  }
-
-  saveChannels(manifest);
-  return manifest;
-}
-
-export function removeChannel(name) {
-  const manifest = loadChannels();
-  if (manifest.channels && manifest.channels[name]) {
-    delete manifest.channels[name];
-    if (manifest.primary_channel === name) {
-      manifest.primary_channel = Object.keys(manifest.channels)[0] || null;
-    }
-    saveChannels(manifest);
-  }
-  return manifest;
 }

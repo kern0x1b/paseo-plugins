@@ -1,4 +1,4 @@
-import { BaseEventDispatcher } from "paseo-fleet-kit";
+import { BaseEventDispatcher, createChannelEvent, requireChannelValue } from "paseo-fleet-kit";
 import { SubscriptionRegistry } from "./subscriptions.js";
 import { loadConfig } from "./config.js";
 
@@ -6,14 +6,6 @@ export class EventDispatcher extends BaseEventDispatcher {
   constructor({ registry = new SubscriptionRegistry(), config = loadConfig(), myUserId = null } = {}) {
     super({ registry, config });
     this.myUserId = myUserId;
-  }
-
-  buildPrompt(event) {
-    return this.buildMessagePrompt(event);
-  }
-
-  buildEnvelope(event) {
-    return this.buildFleetEnvelope(event);
   }
 
   setMyUserId(userId) {
@@ -58,66 +50,28 @@ export class EventDispatcher extends BaseEventDispatcher {
     return false;
   }
 
-  buildMessagePrompt(event) {
+  buildChannelEvent(event) {
     const isDm = this.isDirectMessage(event.channel, event.channel_type);
     const isMention = this.isMentioned(event.text);
-    const category = isDm ? "Direct Message (DM)" : isMention ? "Mention" : "Thread reply";
+    const kind = isDm ? "dm" : isMention ? "mention" : "thread_reply";
+    const teamId = requireChannelValue(event.team || this.config.teamId, "team");
+    const channelId = requireChannelValue(event.channel, "channel");
+    const ts = requireChannelValue(event.ts, "ts");
+    const threadTs = event.thread_ts || ts;
 
-    return [
-      `[Slack Incoming ${category}]`,
-      `From User: ${event.user || "unknown"}`,
-      `Channel: ${event.channel}`,
-      event.thread_ts ? `Thread TS: ${event.thread_ts}` : null,
-      `Message TS: ${event.ts}`,
-      `Text:`,
-      event.text,
-    ]
-      .filter(Boolean)
-      .join("\n");
-  }
-
-  buildFleetEnvelope(event) {
-    const isDm = this.isDirectMessage(event.channel, event.channel_type);
-    const isMention = this.isMentioned(event.text);
-    const eventType = isDm ? "dm" : isMention ? "mention" : "thread_reply";
-    const teamId = event.team || this.config.teamId || "default";
-    const channelId = event.channel || "unknown";
-    const ts = event.ts || Date.now().toString();
-    const threadTs = event.thread_ts || event.ts || null;
-    const actorId = event.user || "unknown";
-    const actorName = event.username || event.user || "Anonymous";
-    const isBot = Boolean(event.bot_id || event.subtype === "bot_message");
-
-    return {
-      protocol: "paseo-fleet/v1",
-      id: `evt_slack_${teamId}_${channelId}_${ts.replace(".", "_")}`,
-      timestamp: new Date().toISOString(),
-      source: "slack",
-      instance: teamId,
-      scope: channelId,
-      urn: `urn:slack:${teamId}:${channelId}:${ts}`,
-      event_type: eventType,
-      actor: {
-        id: actorId,
-        name: actorName,
-        is_bot: isBot,
-      },
-      target: {
-        type: threadTs ? "thread" : "channel",
-        id: threadTs || channelId,
+    return createChannelEvent({
+      content: event.text || "",
+      meta: {
+        source: "slack",
+        kind,
+        urn: `urn:slack:${teamId}:${channelId}:${ts}`,
         channel: channelId,
+        user: event.user,
+        ts,
+        thread_ts: threadTs,
         team: teamId,
       },
-      content: event.text || "",
-      reply_action: {
-        type: "mcp",
-        tool: "slack_send_message",
-        params: {
-          channel: channelId,
-          ...(threadTs ? { thread_ts: threadTs } : {}),
-        },
-      },
-    };
+    });
   }
 
   async dispatch(event) {
