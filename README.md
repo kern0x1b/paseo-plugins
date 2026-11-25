@@ -43,7 +43,7 @@ npm test -w paseo-gitlab
 ```
 
 Shared configuration is defined once at the root: `tsconfig.base.json`, `.prettierrc.json`,
-`.githooks/commit-msg`, CI in `.github/workflows`, and the dev dependencies in `package.json`. Each
+`.githooks/commit-msg` and the dev dependencies in `package.json`. Each
 package keeps only its own code, `package.json`, `CHANGELOG.md` and docs. See
 [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md).
 
