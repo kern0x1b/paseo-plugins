@@ -5,6 +5,8 @@ import { loadConfig } from "./config.js";
 const MAX_BODY_CHARS = 4000;
 
 export class GitLabEventDispatcher extends BaseEventDispatcher {
+  source = "gitlab";
+
   constructor({
     registry = new SubscriptionRegistry(),
     config = loadConfig(),
@@ -14,6 +16,11 @@ export class GitLabEventDispatcher extends BaseEventDispatcher {
     super({ registry, config });
     this.myUsername = myUsername;
     this.scope = scope;
+  }
+
+  rawEventRef(event) {
+    const ref = event.raw?.id ?? event.url;
+    return ref === undefined || ref === null ? null : String(ref);
   }
 
   buildContent(event) {
@@ -31,7 +38,12 @@ export class GitLabEventDispatcher extends BaseEventDispatcher {
   buildChannelEvent(event) {
     const host = requireChannelValue(this.config.host, "host");
     const project = requireChannelValue(
-      event.projectPath || event.project || this.config.defaultProjectId || event.raw?.project_id,
+      event.projectPath ||
+        event.project ||
+        this.config.defaultProjectId ||
+        event.raw?.project?.path_with_namespace ||
+        event.raw?.project?.id ||
+        event.raw?.project_id,
       "project",
     );
     const kind = (event.actionName || event.category || "event").toLowerCase().replace(/[\s()]+/g, "_");

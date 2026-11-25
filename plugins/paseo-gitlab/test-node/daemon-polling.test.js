@@ -249,3 +249,17 @@ test("after a restart the events that happened while the router was down are sti
   assert.match(sent[0], /comment 41/);
   assert.ok(!sent[0].includes("comment 40"));
 });
+
+test("a batch that cannot be dispatched is undone and queued again, and the error goes up", async () => {
+  const { daemon } = makeDaemon({ client: {} });
+  const undone = [];
+  daemon.queueEvent("event:1", commentOnMyMr(1), () => undone.push("event:1"));
+  daemon.dispatcher.dispatchBatch = async () => {
+    throw new Error("registry unreadable");
+  };
+
+  await assert.rejects(daemon.deliverQueuedEvents(), /registry unreadable/);
+  assert.deepEqual(undone, ["event:1"]);
+  assert.equal(daemon.pendingEvents.length, 1);
+  assert.equal(daemon.pendingEvents[0].key, "event:1");
+});

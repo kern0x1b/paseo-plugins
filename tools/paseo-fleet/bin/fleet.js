@@ -183,9 +183,11 @@ async function main() {
       }
 
       case 'help':
-      default:
         printHelp();
         break;
+      default:
+        console.error(`Error: unknown command '${command}'. Run 'fleet help' for the list of commands.`);
+        process.exit(1);
     }
   } catch (err) {
     console.error(`Error: ${err.message}`);

@@ -29,7 +29,10 @@ class TestDispatcher extends BaseEventDispatcher {
     return !event.noise;
   }
 
+  source = "test";
+
   buildChannelEvent(event) {
+    if (event.bad) throw new Error("bad event");
     return createChannelEvent({
       content: event.text,
       meta: { source: "test", kind: "note", urn: `urn:test:${event.text}` },
@@ -184,5 +187,39 @@ describe("BaseEventDispatcher agent status", () => {
     assert.equal(delivery.success, false);
     assert.equal(delivery.inactive, undefined);
     assert.match(delivery.error, /paseo inspect agent-c failed/);
+  });
+});
+
+describe("BaseEventDispatcher.buildBatchMessage isolation", () => {
+  it("replaces an invalid event with a delivery_error tag and keeps the rest of the batch", (t) => {
+    const logged = t.mock.method(console, "error", () => {});
+    const dispatcher = new TestDispatcher({ registry: registryWith(), config: {} });
+
+    const batch = dispatcher.buildBatchMessage([
+      { text: "first" },
+      { text: "broken", bad: true, id: "raw-42" },
+      { text: "third" },
+    ]);
+
+    assert.equal(
+      batch,
+      [
+        tag("first"),
+        '<channel source="test" kind="delivery_error" urn="urn:test:error:raw-42">\nbad event\nraw event: raw-42\n</channel>',
+        tag("third"),
+      ].join("\n\n"),
+    );
+    assert.equal(logged.mock.calls.length, 1);
+    assert.match(logged.mock.calls[0].arguments[0], /raw-42 could not be rendered: bad event/);
+  });
+
+  it("uses the time as the delivery_error urn when the event has no raw id", (t) => {
+    t.mock.method(console, "error", () => {});
+    const dispatcher = new TestDispatcher({ registry: registryWith(), config: {} });
+    const batch = dispatcher.buildBatchMessage([{ text: "x", bad: true }]);
+    assert.match(
+      batch,
+      /^<channel source="test" kind="delivery_error" urn="urn:test:error:\d+">\nbad event\n<\/channel>$/,
+    );
   });
 });

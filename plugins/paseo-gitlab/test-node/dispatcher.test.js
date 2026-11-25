@@ -172,3 +172,36 @@ test("dispatch sends the channel tag to the coordinator when nothing subscribes"
   );
   assert.doesNotMatch(calls[0].prompt, /paseo-fleet|reply_action/);
 });
+
+test("the project of a to-do comes from the raw event when the event has no project path", () => {
+  const dispatcher = new GitLabEventDispatcher({ config: { host: "https://gitlab.corp.net" } });
+  const { meta } = dispatcher.buildChannelEvent({
+    actionName: "review_requested",
+    author: "dev.user",
+    mrIid: 42,
+    raw: { id: 9, project: { id: 7, path_with_namespace: "core/backend" } },
+  });
+  assert.equal(meta.project, "core/backend");
+  assert.equal(meta.urn, "urn:gitlab:gitlab.corp.net:core/backend:mr:42");
+});
+
+test("a GitLab event that cannot be built becomes a delivery_error tag and the batch goes on", (t) => {
+  t.mock.method(console, "error", () => {});
+  const dispatcher = new GitLabEventDispatcher({ config: { host: "https://gitlab.corp.net" } });
+  const valid = {
+    actionName: "issue_created",
+    author: "qa.lead",
+    issueIid: 15,
+    projectPath: "core/backend",
+    title: "Bug",
+  };
+  const broken = { actionName: "commented on", author: "dev.user", mrIid: 42, raw: { id: 555 } };
+
+  const batch = dispatcher.buildBatchMessage([valid, broken]);
+
+  assert.match(batch, /^<channel source="gitlab" kind="issue_created" /);
+  assert.match(
+    batch,
+    /<channel source="gitlab" kind="delivery_error" urn="urn:gitlab:error:555">\nproject is required to build a channel event\nraw event: 555\n<\/channel>$/,
+  );
+});

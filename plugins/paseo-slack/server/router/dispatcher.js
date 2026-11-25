@@ -1,15 +1,27 @@
-import { BaseEventDispatcher, createChannelEvent, requireChannelValue } from "paseo-fleet-kit";
+import {
+  BaseEventDispatcher,
+  createChannelEvent,
+  renderChannelEvent,
+  requireChannelValue,
+} from "paseo-fleet-kit";
 import { SubscriptionRegistry } from "./subscriptions.js";
 import { loadConfig } from "./config.js";
 
 export class EventDispatcher extends BaseEventDispatcher {
+  source = "slack";
+
   constructor({ registry = new SubscriptionRegistry(), config = loadConfig(), myUserId = null } = {}) {
     super({ registry, config });
     this.myUserId = myUserId;
+    this.teamId = null;
   }
 
   setMyUserId(userId) {
     this.myUserId = userId;
+  }
+
+  setTeamId(teamId) {
+    this.teamId = teamId;
   }
 
   isDirectMessage(channel, channelType) {
@@ -50,11 +62,15 @@ export class EventDispatcher extends BaseEventDispatcher {
     return false;
   }
 
+  rawEventRef(event) {
+    return event.ts ?? null;
+  }
+
   buildChannelEvent(event) {
     const isDm = this.isDirectMessage(event.channel, event.channel_type);
     const isMention = this.isMentioned(event.text);
     const kind = isDm ? "dm" : isMention ? "mention" : "thread_reply";
-    const teamId = requireChannelValue(event.team || this.config.teamId, "team");
+    const teamId = requireChannelValue(this.teamId, "team");
     const channelId = requireChannelValue(event.channel, "channel");
     const ts = requireChannelValue(event.ts, "ts");
     const threadTs = event.thread_ts || ts;
@@ -72,6 +88,23 @@ export class EventDispatcher extends BaseEventDispatcher {
         team: teamId,
       },
     });
+  }
+
+  buildHealthChannelEvent(message) {
+    const teamId = requireChannelValue(this.teamId, "team");
+    return createChannelEvent({
+      content: message,
+      meta: {
+        source: "slack",
+        kind: "health_alert",
+        urn: `urn:slack:${teamId}:health:${Date.now()}`,
+        team: teamId,
+      },
+    });
+  }
+
+  renderHealthAlert(message) {
+    return renderChannelEvent(this.buildHealthChannelEvent(message));
   }
 
   async dispatch(event) {

@@ -117,6 +117,7 @@ export class SocketListener {
 
     const auth = await this.client.authTest();
     this.dispatcher.setMyUserId(auth.user_id);
+    this.dispatcher.setTeamId(auth.team_id);
     this.log(`Authenticated as ${auth.user} (${auth.user_id}) on team ${auth.team}`);
 
     this.healthCheckTimer = setInterval(() => this.evaluateHealth(), HEALTH_CHECK_INTERVAL_MS);
@@ -268,10 +269,9 @@ export class SocketListener {
   }
 
   async sendHealthAlert(message, nextActiveState) {
-    const prompt = `[Slack Daemon Health Alert]\n${message}`;
     this.alertInFlight = true;
     try {
-      const res = await this.dispatcher.notifyCoordinator(prompt);
+      const res = await this.dispatcher.notifyCoordinator(this.dispatcher.renderHealthAlert(message));
       if (res.routed) {
         this.alertActive = nextActiveState;
         this.warn(`Health alert sent to ${res.targetAgent}: ${message}`);

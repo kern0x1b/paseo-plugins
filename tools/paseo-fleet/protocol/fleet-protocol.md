@@ -37,7 +37,7 @@ Meta used by the adapters:
 
 `scope="others"` marks an event from the router that watches other people's activity.
 
-An event that lacks `source`, `kind` or `urn`, or has an invalid key, is an error. No adapter fills in a default.
+An event that lacks `source`, `kind` or `urn`, or has an invalid key, is an error. No adapter fills in a default. In a batch, such an event is logged and replaced by a tag of its own, `kind="delivery_error"` with `urn="urn:<source>:error:<raw id>"` and the reason as content; the other events are delivered.
 
 ## 2. Delivery
 
@@ -50,7 +50,7 @@ An adapter renders the event as a tag and sends it to the Coordinator:
 ```
 
 - `source`, `kind` and `urn` come first, the other attributes follow in alphabetical order.
-- Attribute values escape `&`, `"`, `<` and `>`. The content is written as it is.
+- Attribute values escape `&`, `"`, `<` and `>`. In the content, `<channel` and `</channel` (any letter case) are escaped, so text cannot open or close an element.
 - A batch is the tags one after another, separated by a blank line. It has no header.
 
 ```bash

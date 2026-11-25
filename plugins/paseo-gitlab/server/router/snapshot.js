@@ -53,13 +53,19 @@ export class GitLabSnapshot {
     }
 
     const mrItems = await Promise.all(
-      Array.from(mrRoles.values()).map(({ mr, roles }) => this.buildMergeRequestItem(mr, roles)),
+      Array.from(mrRoles.values()).map(({ mr, roles }) =>
+        this.buildSafely(`mr:${mr.project_id}!${mr.iid}`, () => this.buildMergeRequestItem(mr, roles)),
+      ),
     );
-    const dated = [
-      ...mrItems,
-      ...assignedIssues.map((issue) => this.buildIssueItem(issue)),
-      ...todos.map((todo) => this.buildTodoItem(todo)),
-    ];
+    const issueItems = await Promise.all(
+      assignedIssues.map((issue) =>
+        this.buildSafely(`issue:${issue.project_id}#${issue.iid}`, () => this.buildIssueItem(issue)),
+      ),
+    );
+    const todoItems = await Promise.all(
+      todos.map((todo) => this.buildSafely(`todo:${todo.id}`, () => this.buildTodoItem(todo))),
+    );
+    const dated = [...mrItems, ...issueItems, ...todoItems].filter(Boolean);
 
     return {
       format: CHANNEL_FORMAT,
@@ -80,6 +86,15 @@ export class GitLabSnapshot {
     } catch (err) {
       this.errors.push({ source, error: err.message });
       return [];
+    }
+  }
+
+  async buildSafely(source, build) {
+    try {
+      return await build();
+    } catch (err) {
+      this.errors.push({ source, error: err.message });
+      return null;
     }
   }
 
@@ -136,10 +151,10 @@ export class GitLabSnapshot {
     const facts = [
       `roles: ${roles.join(", ")}`,
       draft ? "draft" : null,
-      pipeline ? `pipeline ${pipeline.status}` : "no pipeline",
-      detailedMergeStatus ? `merge status ${detailedMergeStatus}` : null,
+      details ? (pipeline ? `pipeline ${pipeline.status}` : "no pipeline") : "details not loaded",
+      details && detailedMergeStatus ? `merge status ${detailedMergeStatus}` : null,
       merged.has_conflicts ? "has conflicts" : null,
-      `approved by: ${approvedBy.join(", ") || "nobody"}`,
+      approvals ? `approved by: ${approvedBy.join(", ") || "nobody"}` : "approvals not loaded",
     ].filter(Boolean);
 
     return this.buildItem({

@@ -55,6 +55,10 @@ function escapeAttribute(value) {
   return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+function escapeContent(content) {
+  return content.replace(/<(\/?channel)/gi, "&lt;$1");
+}
+
 export function renderChannelEvent(event) {
   const { content, meta } = createChannelEvent(event);
   const otherKeys = Object.keys(meta)
@@ -63,7 +67,7 @@ export function renderChannelEvent(event) {
   const attributes = [...LEADING_ATTRIBUTES, ...otherKeys]
     .map((key) => `${key}="${escapeAttribute(meta[key])}"`)
     .join(" ");
-  return `<channel ${attributes}>\n${content}\n</channel>`;
+  return `<channel ${attributes}>\n${escapeContent(content)}\n</channel>`;
 }
 
 export function mergeChannelEventsByUrn(events) {

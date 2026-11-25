@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { execSync } from 'node:child_process';
+import { execSync, spawnSync } from 'node:child_process';
 import { describe, it } from 'node:test';
 import { isolatedHome } from './isolated-home.mjs';
 
@@ -27,10 +27,12 @@ describe('Fleet CLI binary', () => {
     assert.match(getOutput, /test-coord-42/);
   });
 
-  it('treats the removed commands as unknown and prints the manual', () => {
-    for (const command of ['channel ls', 'test-event --dry-run', 'validate -']) {
-      const output = execSync(`node bin/fleet.js ${command}`, { encoding: 'utf8', env });
-      assert.match(output, /USAGE:/, command);
+  it('exits 1 with the reason on stderr for an unknown or removed command', () => {
+    for (const command of ['channel', 'test-event', 'validate']) {
+      const result = spawnSync('node', ['bin/fleet.js', command], { encoding: 'utf8', env });
+      assert.equal(result.status, 1, command);
+      assert.equal(result.stdout, '', command);
+      assert.match(result.stderr, new RegExp(`unknown command '${command}'`), command);
     }
   });
 

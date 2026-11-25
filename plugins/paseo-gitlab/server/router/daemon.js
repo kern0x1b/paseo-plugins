@@ -230,7 +230,15 @@ export class GitLabDaemon {
     if (queued.length === 0) return;
 
     const byEvent = new Map(queued.map((item) => [item.event, item]));
-    const { results, unrouted } = await this.dispatcher.dispatchBatch(queued.map((item) => item.event));
+    let outcome;
+    try {
+      outcome = await this.dispatcher.dispatchBatch(queued.map((item) => item.event));
+    } catch (err) {
+      for (const item of queued) item.undo();
+      this.pendingEvents.push(...queued);
+      throw err;
+    }
+    const { results, unrouted } = outcome;
 
     for (const result of results) {
       const items = result.events.map((event) => byEvent.get(event));

@@ -56,9 +56,11 @@ function createFakeClient({ failing = [] } = {}) {
       ];
     },
     async getMergeRequest() {
+      if (failing.includes("details")) throw new Error("details unavailable");
       return { ...mergeRequest, head_pipeline: { id: 77, status: "failed", web_url: "https://ci/77" } };
     },
     async call() {
+      if (failing.includes("approvals")) throw new Error("approvals unavailable");
       return { approved_by: [], approvals_left: 1 };
     },
   };
@@ -90,4 +92,44 @@ test("GitLabSnapshot keeps the other sources when one of them fails", async () =
   assert.equal(issueItem.meta.kind, "issue_assigned");
   assert.equal(issueItem.meta.author, "qa.user");
   assert.match(issueItem.content, /labels: bug/);
+});
+
+test("a merge request whose details and approvals did not load says so instead of inventing facts", async () => {
+  const snapshot = await new GitLabSnapshot({
+    client: createFakeClient({ failing: ["details", "approvals"] }),
+  }).collect();
+
+  const mergeRequestItem = snapshot.items.find((item) => item.meta.mr === "42");
+  assert.match(mergeRequestItem.content, /details not loaded/);
+  assert.match(mergeRequestItem.content, /approvals not loaded/);
+  assert.doesNotMatch(mergeRequestItem.content, /no pipeline|approved by: nobody/);
+  assert.deepEqual(snapshot.errors, [
+    { source: "mr:7!42", error: "details unavailable" },
+    { source: "mr:7!42:approvals", error: "approvals unavailable" },
+  ]);
+});
+
+test("an item that cannot be built is reported in errors and the rest of the snapshot is kept", async () => {
+  const client = createFakeClient();
+  client.getTodos = async () => [
+    {
+      id: 901,
+      action_name: "mentioned",
+      target_type: "Issue",
+      target: { iid: 5, title: "Broken login" },
+      author: { username: "qa.user" },
+      updated_at: "2026-10-01T09:00:00Z",
+    },
+  ];
+
+  const snapshot = await new GitLabSnapshot({ client }).collect();
+
+  assert.deepEqual(snapshot.errors, [
+    { source: "todo:901", error: "todo project is required to build a channel event" },
+  ]);
+  assert.equal(snapshot.items.length, 2);
+  assert.equal(
+    snapshot.items.some((item) => item.meta.issue === "5"),
+    true,
+  );
 });
